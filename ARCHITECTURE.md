@@ -27,18 +27,23 @@ Alexandria is the persistent memory layer of the Warren agent swarm. It sits alo
 │  ┌──────────┐  ┌────┴─────┐  ┌──────────┐          │
 │  │Embeddings│  │PostgreSQL│  │Encryption│          │
 │  │ Provider │  │  (pgx)   │  │ (Fernet) │          │
-│  └──────────┘  └──────────┘  └──────────┘          │
+│  └─────┬────┘  └──────────┘  └──────────┘          │
+│        │                                             │
+│  ┌─────┴──────────────────────────────┐              │
+│  │  local │ simple │ openai           │              │
+│  └─────┬──────────────────────────────┘              │
 │                                                       │
 │  ┌──────────────────────────────────────┐            │
 │  │         Middleware Layer             │            │
 │  │  Auth │ Rate Limit │ Logging        │            │
 │  └──────────────────────────────────────┘            │
 └──────────────────────────────────────────────────────┘
-         │                          │
-    ┌────┴────┐              ┌─────┴─────┐
-    │Supabase │              │  Hermes   │
-    │PostgreSQL│              │  (NATS)   │
-    └─────────┘              └───────────┘
+         │              │               │
+    ┌────┴────┐   ┌─────┴─────┐  ┌────┴──────────┐
+    │Supabase │   │  Hermes   │  │  Embeddings   │
+    │PostgreSQL│   │  (NATS)   │  │  Sidecar      │
+    └─────────┘   └───────────┘  │ (MiniLM-L6)  │
+                                  └───────────────┘
 ```
 
 ## Data Flow
@@ -79,7 +84,7 @@ Warren waking agent → GET /api/v1/briefings/{agent_id} → Query recent events
 
 1. **pgx over Supabase REST API**: Direct PostgreSQL gives us transactions, prepared statements, and pgvector support without REST overhead.
 
-2. **Simple embedding provider for Phase 1**: Hash-based pseudo-embeddings allow the full search pipeline to work without external API dependencies. OpenAI provider available as a swap-in.
+2. **Local embedding sidecar (default)**: A Python sidecar running `all-MiniLM-L6-v2` via sentence-transformers provides real semantic embeddings (384 dimensions) without external API dependencies. The model is baked into the Docker image at build time. A hash-based simple provider and OpenAI provider are also available as alternatives.
 
 3. **Soft deletes for knowledge**: Entries are marked with `deleted_at` rather than removed, preserving audit trail and allowing recovery.
 

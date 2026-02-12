@@ -31,7 +31,8 @@ psql $DATABASE_URL < migrations/001_alexandria_schema.sql
 export DATABASE_URL="postgresql://postgres:password@db.uaubofpmokvumbqpeymz.supabase.co:5432/postgres"
 export ENCRYPTION_KEY="your-fernet-key-here"  # Generate with: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
 export NATS_URL="nats://localhost:4222"        # Optional
-export EMBEDDING_BACKEND="simple"              # or "openai"
+export EMBEDDING_BACKEND="local"               # "local" (default), "simple", or "openai"
+export EMBEDDING_SIDECAR_URL="http://localhost:8501"  # Required if EMBEDDING_BACKEND=local
 export OPENAI_API_KEY=""                       # Required if EMBEDDING_BACKEND=openai
 ```
 
@@ -51,6 +52,18 @@ docker run -p 8500:8500 \
   -e ENCRYPTION_KEY="..." \
   alexandria
 ```
+
+### Local Embeddings Sidecar
+
+The default embedding backend (`local`) uses a Python sidecar running `all-MiniLM-L6-v2` (384 dimensions). Start it alongside Alexandria:
+
+```bash
+cd embeddings-sidecar
+docker build -t alexandria-embeddings .
+docker run -p 8501:8501 alexandria-embeddings
+```
+
+The model is baked into the Docker image at build time — no runtime downloads needed.
 
 ## API Reference
 
@@ -126,7 +139,8 @@ Error:
 | `ENCRYPTION_KEY` | | Fernet encryption key |
 | `ENCRYPTION_KEY_PATH` | /run/secrets/vault_encryption_key | Path to key file |
 | `NATS_URL` | nats://localhost:4222 | NATS server URL |
-| `EMBEDDING_BACKEND` | simple | Embedding provider (simple, openai) |
+| `EMBEDDING_BACKEND` | local | Embedding provider (local, simple, openai) |
+| `EMBEDDING_SIDECAR_URL` | http://localhost:8501 | Local sidecar URL |
 | `OPENAI_API_KEY` | | OpenAI API key |
 | `OPENAI_EMBEDDING_MODEL` | text-embedding-3-small | OpenAI model |
 | `JWT_SECRET` | | JWT verification secret (Phase 2) |

@@ -29,9 +29,10 @@ type Config struct {
 	NatsURL string
 
 	// Embeddings
-	EmbeddingBackend string // "simple" or "openai"
-	OpenAIAPIKey     string
-	OpenAIModel      string
+	EmbeddingBackend   string // "simple", "local", or "openai"
+	EmbeddingSidecarURL string // URL for the local embedding sidecar
+	OpenAIAPIKey       string
+	OpenAIModel        string
 
 	// Rate limiting
 	KnowledgeRateLimit int           // requests per minute
@@ -54,7 +55,8 @@ func Load() (*Config, error) {
 		EncryptionKeyPath:  envStr("ENCRYPTION_KEY_PATH", "/run/secrets/vault_encryption_key"),
 		EncryptionKey:      envStr("ENCRYPTION_KEY", ""),
 		NatsURL:            envStr("NATS_URL", "nats://localhost:4222"),
-		EmbeddingBackend:   envStr("EMBEDDING_BACKEND", "simple"),
+		EmbeddingBackend:   envStr("EMBEDDING_BACKEND", "local"),
+		EmbeddingSidecarURL: envStr("EMBEDDING_SIDECAR_URL", "http://localhost:8501"),
 		OpenAIAPIKey:       envStr("OPENAI_API_KEY", ""),
 		OpenAIModel:        envStr("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small"),
 		KnowledgeRateLimit: envInt("KNOWLEDGE_RATE_LIMIT", 100),

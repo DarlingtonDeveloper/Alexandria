@@ -56,6 +56,8 @@ func main() {
 			os.Exit(1)
 		}
 		embedder = embeddings.NewOpenAIProvider(cfg.OpenAIAPIKey, cfg.OpenAIModel)
+	case "local":
+		embedder = embeddings.NewLocalProvider(cfg.EmbeddingSidecarURL)
 	default:
 		embedder = embeddings.NewSimpleProvider()
 	}

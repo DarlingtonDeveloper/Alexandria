@@ -7,8 +7,9 @@ import (
 	pgvector "github.com/pgvector/pgvector-go"
 )
 
-// Dimensions is the embedding vector size (matching OpenAI text-embedding-3-small).
-const Dimensions = 1536
+// Dimensions is the embedding vector size (384 = all-MiniLM-L6-v2).
+// OpenAI text-embedding-3-small also supports 384 via the dimensions parameter.
+const Dimensions = 384
 
 // Provider generates text embeddings.
 type Provider interface {

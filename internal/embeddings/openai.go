@@ -36,8 +36,9 @@ func (p *OpenAIProvider) Name() string {
 }
 
 type openAIRequest struct {
-	Input string `json:"input"`
-	Model string `json:"model"`
+	Input      string `json:"input"`
+	Model      string `json:"model"`
+	Dimensions int    `json:"dimensions,omitempty"`
 }
 
 type openAIResponse struct {
@@ -52,8 +53,9 @@ type openAIResponse struct {
 // Embed generates an embedding using the OpenAI API.
 func (p *OpenAIProvider) Embed(ctx context.Context, text string) (pgvector.Vector, error) {
 	body, err := json.Marshal(openAIRequest{
-		Input: text,
-		Model: p.model,
+		Input:      text,
+		Model:      p.model,
+		Dimensions: Dimensions, // request 384 dims to match local model
 	})
 	if err != nil {
 		return pgvector.Vector{}, fmt.Errorf("marshaling request: %w", err)
