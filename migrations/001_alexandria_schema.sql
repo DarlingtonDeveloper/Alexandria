@@ -29,7 +29,7 @@ CREATE TABLE vault_knowledge (
   scope         vault_knowledge_scope NOT NULL DEFAULT 'public',
   shared_with   TEXT[] DEFAULT '{}',
   tags          TEXT[] DEFAULT '{}',
-  embedding     vector(384) -- 384 dimensions matches all-MiniLM-L6-v2,
+  embedding     vector(384), -- 384 dimensions matches all-MiniLM-L6-v2
   metadata      JSONB DEFAULT '{}',
   source_event_id TEXT,
   confidence    FLOAT DEFAULT 0.8 CHECK (confidence >= 0 AND confidence <= 1),
@@ -161,7 +161,7 @@ CREATE INDEX vault_access_log_created_at_idx ON vault_access_log(created_at DESC
 -- ============================================
 
 CREATE OR REPLACE FUNCTION vault_semantic_search(
-  query_embedding vector(384) -- 384 dimensions matches all-MiniLM-L6-v2,
+  query_embedding vector(384), -- 384 dimensions matches all-MiniLM-L6-v2
   match_count INT DEFAULT 10,
   filter_scope vault_knowledge_scope DEFAULT NULL,
   filter_categories vault_knowledge_category[] DEFAULT NULL,
