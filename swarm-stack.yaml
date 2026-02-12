@@ -14,7 +14,8 @@
     environment:
       ALEXANDRIA_PORT: "8500"
       ALEXANDRIA_LOG_LEVEL: "info"
-      EMBEDDING_BACKEND: "simple"
+      EMBEDDING_BACKEND: "local"
+      EMBEDDING_SIDECAR_URL: "http://warren_alexandria_embeddings:8501"
       NATS_URL: "nats://hermes:4222"
     secrets:
       - database_url
@@ -25,6 +26,27 @@
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:8500/api/v1/health"]
       interval: 30s
       timeout: 5s
+      retries: 3
+    depends_on:
+      - alexandria_embeddings
+
+  alexandria_embeddings:
+    image: alexandria-embeddings:latest
+    build:
+      context: ./embeddings-sidecar
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          memory: 512M
+    ports:
+      - target: 8501
+    networks:
+      - warren_overlay
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8501/health')"]
+      interval: 30s
+      timeout: 10s
       retries: 3
 
 secrets:
