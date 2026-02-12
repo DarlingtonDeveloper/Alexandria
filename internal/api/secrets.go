@@ -14,15 +14,17 @@ import (
 // SecretHandler provides secret management endpoints.
 type SecretHandler struct {
 	secrets   *store.SecretStore
+	grants    *store.GrantStore
 	audit     *store.AuditStore
 	encryptor *encryption.Encryptor
 	publisher *hermes.Publisher
 }
 
 // NewSecretHandler creates a new SecretHandler.
-func NewSecretHandler(secrets *store.SecretStore, audit *store.AuditStore, encryptor *encryption.Encryptor, publisher *hermes.Publisher) *SecretHandler {
+func NewSecretHandler(secrets *store.SecretStore, grants *store.GrantStore, audit *store.AuditStore, encryptor *encryption.Encryptor, publisher *hermes.Publisher) *SecretHandler {
 	return &SecretHandler{
 		secrets:   secrets,
+		grants:    grants,
 		audit:     audit,
 		encryptor: encryptor,
 		publisher: publisher,
@@ -34,8 +36,45 @@ type SecretCreateRequest struct {
 	Name                 string   `json:"name"`
 	Value                string   `json:"value"`
 	Description          *string  `json:"description,omitempty"`
-	Scope                []string `json:"scope,omitempty"`
+	Scope                []string `json:"scope,omitempty"` // Kept for backward compatibility
 	RotationIntervalDays *int     `json:"rotation_interval_days,omitempty"`
+	OwnerType            *string  `json:"owner_type,omitempty"` // New: 'agent', 'person', 'device'
+	OwnerID              *string  `json:"owner_id,omitempty"`   // New: owner UUID or agent name
+}
+
+// getSubjectFromHeaders extracts subject info from request headers.
+func (h *SecretHandler) getSubjectFromHeaders(r *http.Request) (subjectType, subjectID string) {
+	// Try X-Agent-ID first (backward compatibility)
+	if agentID := r.Header.Get("X-Agent-ID"); agentID != "" {
+		return "agent", agentID
+	}
+	
+	// Try X-Device-ID
+	if deviceID := r.Header.Get("X-Device-ID"); deviceID != "" {
+		return "device", deviceID
+	}
+
+	// Fall back to middleware agent ID
+	agentID := middleware.AgentIDFromContext(r.Context())
+	return "agent", agentID
+}
+
+// checkSecretAccess checks if subject can access a secret.
+func (h *SecretHandler) checkSecretAccess(r *http.Request, secret *store.Secret, permission string) (bool, string) {
+	subjectType, subjectID := h.getSubjectFromHeaders(r)
+	
+	// Check legacy scope-based access first (backward compatibility)
+	if secret != nil && h.secrets.CanAccess(secret, subjectID) {
+		return true, subjectID
+	}
+
+	// Check new access grant system
+	hasAccess, err := h.grants.CheckAccessWithPermission(r.Context(), subjectType, subjectID, "secret", secret.Name, permission)
+	if err != nil {
+		return false, subjectID
+	}
+	
+	return hasAccess, subjectID
 }
 
 // Create handles POST /secrets.
@@ -63,13 +102,25 @@ func (h *SecretHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Set defaults for ownership
+	ownerType := "agent"
+	ownerID := agentID
+	if req.OwnerType != nil {
+		ownerType = *req.OwnerType
+	}
+	if req.OwnerID != nil {
+		ownerID = *req.OwnerID
+	}
+
 	secret, err := h.secrets.Create(r.Context(), store.SecretCreateInput{
 		Name:                 req.Name,
 		EncryptedValue:       encrypted,
 		Description:          req.Description,
-		Scope:                req.Scope,
+		Scope:                req.Scope, // Kept for backward compatibility
 		RotationIntervalDays: req.RotationIntervalDays,
 		CreatedBy:            agentID,
+		OwnerType:            &ownerType,
+		OwnerID:              &ownerID,
 	})
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to create secret")
@@ -82,7 +133,7 @@ func (h *SecretHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 // List handles GET /secrets — returns names only, not values.
 func (h *SecretHandler) List(w http.ResponseWriter, r *http.Request) {
-	agentID := middleware.AgentIDFromContext(r.Context())
+	subjectType, subjectID := h.getSubjectFromHeaders(r)
 
 	secrets, err := h.secrets.List(r.Context())
 	if err != nil {
@@ -90,10 +141,18 @@ func (h *SecretHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Filter to secrets the agent can access
+	// Filter to secrets the subject can access
 	var visible []store.Secret
 	for _, s := range secrets {
-		if h.secrets.CanAccess(&s, agentID) {
+		// Check legacy scope-based access first
+		if h.secrets.CanAccess(&s, subjectID) {
+			visible = append(visible, s)
+			continue
+		}
+
+		// Check new access grant system
+		hasAccess, err := h.grants.CheckAccess(r.Context(), subjectType, subjectID, "secret", s.Name)
+		if err == nil && hasAccess {
 			visible = append(visible, s)
 		}
 	}
@@ -117,12 +176,13 @@ func (h *SecretHandler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !h.secrets.CanAccess(secret, agentID) {
+	hasAccess, subjectID := h.checkSecretAccess(r, secret, "read")
+	if !hasAccess {
 		h.audit.Log(r.Context(), store.ActionSecretRead, agentID, &name, nil, false, nil)
 		if h.publisher != nil {
-			_ = h.publisher.SecretAccessed(r.Context(), agentID, name, false)
+			_ = h.publisher.SecretAccessed(r.Context(), subjectID, name, false)
 		}
-		writeError(w, http.StatusForbidden, "ACCESS_DENIED", "Agent not authorized to access this secret")
+		writeError(w, http.StatusForbidden, "ACCESS_DENIED", "Subject not authorized to access this secret")
 		return
 	}
 
@@ -135,7 +195,7 @@ func (h *SecretHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 	h.audit.Log(r.Context(), store.ActionSecretRead, agentID, &name, nil, true, nil)
 	if h.publisher != nil {
-		_ = h.publisher.SecretAccessed(r.Context(), agentID, name, true)
+		_ = h.publisher.SecretAccessed(r.Context(), subjectID, name, true)
 	}
 
 	writeSuccess(w, http.StatusOK, map[string]any{
@@ -153,6 +213,23 @@ type SecretUpdateRequest struct {
 func (h *SecretHandler) Update(w http.ResponseWriter, r *http.Request) {
 	agentID := middleware.AgentIDFromContext(r.Context())
 	name := chi.URLParam(r, "name")
+
+	// Check if secret exists and if we have write access
+	secret, err := h.secrets.GetByName(r.Context(), name)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to get secret")
+		return
+	}
+	if secret == nil {
+		writeError(w, http.StatusNotFound, "SECRET_NOT_FOUND", "No secret with name '"+name+"'")
+		return
+	}
+
+	hasAccess, _ := h.checkSecretAccess(r, secret, "write")
+	if !hasAccess {
+		writeError(w, http.StatusForbidden, "ACCESS_DENIED", "Subject not authorized to modify this secret")
+		return
+	}
 
 	var req SecretUpdateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -180,6 +257,23 @@ func (h *SecretHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	agentID := middleware.AgentIDFromContext(r.Context())
 	name := chi.URLParam(r, "name")
 
+	// Check if secret exists and if we have admin access
+	secret, err := h.secrets.GetByName(r.Context(), name)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to get secret")
+		return
+	}
+	if secret == nil {
+		writeError(w, http.StatusNotFound, "SECRET_NOT_FOUND", "No secret with name '"+name+"'")
+		return
+	}
+
+	hasAccess, _ := h.checkSecretAccess(r, secret, "admin")
+	if !hasAccess {
+		writeError(w, http.StatusForbidden, "ACCESS_DENIED", "Subject not authorized to delete this secret")
+		return
+	}
+
 	if err := h.secrets.Delete(r.Context(), name); err != nil {
 		if err.Error() == "not found" {
 			writeError(w, http.StatusNotFound, "SECRET_NOT_FOUND", "No secret with name '"+name+"'")
@@ -188,6 +282,9 @@ func (h *SecretHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to delete secret")
 		return
 	}
+
+	// Clean up associated access grants
+	h.grants.DeleteByResource(r.Context(), "secret", name)
 
 	h.audit.Log(r.Context(), store.ActionSecretDelete, agentID, &name, nil, true, nil)
 	writeSuccess(w, http.StatusOK, map[string]string{"deleted": name})
@@ -202,6 +299,23 @@ type RotateRequest struct {
 func (h *SecretHandler) Rotate(w http.ResponseWriter, r *http.Request) {
 	agentID := middleware.AgentIDFromContext(r.Context())
 	name := chi.URLParam(r, "name")
+
+	// Check if secret exists and if we have write access
+	secret, err := h.secrets.GetByName(r.Context(), name)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to get secret")
+		return
+	}
+	if secret == nil {
+		writeError(w, http.StatusNotFound, "SECRET_NOT_FOUND", "No secret with name '"+name+"'")
+		return
+	}
+
+	hasAccess, _ := h.checkSecretAccess(r, secret, "write")
+	if !hasAccess {
+		writeError(w, http.StatusForbidden, "ACCESS_DENIED", "Subject not authorized to rotate this secret")
+		return
+	}
 
 	var req RotateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {

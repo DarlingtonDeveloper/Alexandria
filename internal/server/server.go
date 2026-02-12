@@ -46,6 +46,11 @@ func New(cfg *config.Config, db *store.DB, hermesClient *hermes.Client, embedder
 	secretStore := store.NewSecretStore(db)
 	graphStore := store.NewGraphStore(db)
 	auditStore := store.NewAuditStore(db)
+	
+	// New access control stores
+	peopleStore := store.NewPersonStore(db)
+	devicesStore := store.NewDeviceStore(db)
+	grantsStore := store.NewGrantStore(db)
 
 	// Publisher (may be nil if NATS not available)
 	var publisher *hermes.Publisher
@@ -56,10 +61,15 @@ func New(cfg *config.Config, db *store.DB, hermesClient *hermes.Client, embedder
 	// Handlers
 	healthHandler := api.NewHealthHandler(db, knowledgeStore, secretStore, hermesClient)
 	knowledgeHandler := api.NewKnowledgeHandler(knowledgeStore, auditStore, embedder, publisher)
-	secretHandler := api.NewSecretHandler(secretStore, auditStore, encryptor, publisher)
+	secretHandler := api.NewSecretHandler(secretStore, grantsStore, auditStore, encryptor, publisher)
 	briefingAssembler := briefings.NewAssembler(knowledgeStore, secretStore)
 	briefingHandler := api.NewBriefingHandler(briefingAssembler, auditStore, publisher)
 	graphHandler := api.NewGraphHandler(graphStore, auditStore)
+	
+	// New access control handlers
+	peopleHandler := api.NewPeopleHandler(peopleStore, auditStore)
+	devicesHandler := api.NewDevicesHandler(devicesStore, auditStore)
+	grantsHandler := api.NewGrantsHandler(grantsStore, auditStore)
 
 	// Rate limiters
 	knowledgeRL := middleware.NewRateLimiter(cfg.KnowledgeRateLimit, cfg.RateWindow)
@@ -109,6 +119,36 @@ func New(cfg *config.Config, db *store.DB, hermesClient *hermes.Client, embedder
 			r.Get("/entities/{id}", graphHandler.GetEntity)
 			r.Get("/entities/{id}/related", graphHandler.GetRelatedEntities)
 			r.Post("/relationships", graphHandler.CreateRelationship)
+		})
+
+		// Access Control - People
+		r.Route("/people", func(r chi.Router) {
+			r.Use(knowledgeRL.Middleware) // Reuse knowledge rate limit
+			r.Post("/", peopleHandler.Create)
+			r.Get("/", peopleHandler.List)
+			r.Get("/{id}", peopleHandler.Get)
+			r.Put("/{id}", peopleHandler.Update)
+			r.Delete("/{id}", peopleHandler.Delete)
+		})
+
+		// Access Control - Devices
+		r.Route("/devices", func(r chi.Router) {
+			r.Use(knowledgeRL.Middleware) // Reuse knowledge rate limit
+			r.Post("/", devicesHandler.Create)
+			r.Get("/", devicesHandler.List)
+			r.Get("/{id}", devicesHandler.Get)
+			r.Put("/{id}", devicesHandler.Update)
+			r.Delete("/{id}", devicesHandler.Delete)
+		})
+
+		// Access Control - Grants
+		r.Route("/grants", func(r chi.Router) {
+			r.Use(knowledgeRL.Middleware) // Reuse knowledge rate limit
+			r.Post("/", grantsHandler.Create)
+			r.Get("/", grantsHandler.List)
+			r.Get("/check", grantsHandler.CheckAccess)
+			r.Get("/{id}", grantsHandler.Get)
+			r.Delete("/{id}", grantsHandler.Delete)
 		})
 	})
 

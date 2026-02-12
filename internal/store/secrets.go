@@ -19,6 +19,9 @@ type Secret struct {
 	LastRotatedAt        *time.Time `json:"last_rotated_at,omitempty"`
 	ExpiresAt            *time.Time `json:"expires_at,omitempty"`
 	CreatedBy            string     `json:"created_by"`
+	OwnerType            *string    `json:"owner_type,omitempty"`
+	OwnerID              *string    `json:"owner_id,omitempty"`
+	AgentID              *string    `json:"agent_id,omitempty"` // For backward compatibility
 	CreatedAt            time.Time  `json:"created_at"`
 	UpdatedAt            time.Time  `json:"updated_at"`
 }
@@ -31,6 +34,8 @@ type SecretCreateInput struct {
 	Scope                []string `json:"scope"`
 	RotationIntervalDays *int     `json:"rotation_interval_days,omitempty"`
 	CreatedBy            string   `json:"created_by"`
+	OwnerType            *string  `json:"owner_type,omitempty"`
+	OwnerID              *string  `json:"owner_id,omitempty"`
 }
 
 // SecretStore provides secret CRUD operations.
@@ -46,18 +51,25 @@ func NewSecretStore(db *DB) *SecretStore {
 // Create inserts a new secret.
 func (s *SecretStore) Create(ctx context.Context, input SecretCreateInput) (*Secret, error) {
 	query := `
-		INSERT INTO vault_secrets (name, encrypted_value, description, scope, rotation_interval_days, created_by)
-		VALUES ($1, $2, $3, $4, $5, $6)
-		RETURNING id, name, description, scope, rotation_interval_days, last_rotated_at, expires_at, created_by, created_at, updated_at`
+		INSERT INTO vault_secrets (name, encrypted_value, description, scope, rotation_interval_days, created_by, owner_type, owner_id, agent_id)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		RETURNING id, name, description, scope, rotation_interval_days, last_rotated_at, expires_at, created_by, owner_type, owner_id, agent_id, created_at, updated_at`
+
+	// For backward compatibility, if owner_type is 'agent', also set agent_id
+	var agentID *string
+	if input.OwnerType != nil && *input.OwnerType == "agent" && input.OwnerID != nil {
+		agentID = input.OwnerID
+	}
 
 	secret := &Secret{EncryptedValue: input.EncryptedValue}
 	err := s.db.Pool.QueryRow(ctx, query,
 		input.Name, input.EncryptedValue, input.Description, input.Scope,
-		input.RotationIntervalDays, input.CreatedBy,
+		input.RotationIntervalDays, input.CreatedBy, input.OwnerType, input.OwnerID, agentID,
 	).Scan(
 		&secret.ID, &secret.Name, &secret.Description, &secret.Scope,
 		&secret.RotationIntervalDays, &secret.LastRotatedAt, &secret.ExpiresAt,
-		&secret.CreatedBy, &secret.CreatedAt, &secret.UpdatedAt,
+		&secret.CreatedBy, &secret.OwnerType, &secret.OwnerID, &secret.AgentID,
+		&secret.CreatedAt, &secret.UpdatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("creating secret: %w", err)
@@ -69,14 +81,15 @@ func (s *SecretStore) Create(ctx context.Context, input SecretCreateInput) (*Sec
 func (s *SecretStore) GetByName(ctx context.Context, name string) (*Secret, error) {
 	query := `
 		SELECT id, name, encrypted_value, description, scope, rotation_interval_days,
-		       last_rotated_at, expires_at, created_by, created_at, updated_at
+		       last_rotated_at, expires_at, created_by, owner_type, owner_id, agent_id, created_at, updated_at
 		FROM vault_secrets WHERE name = $1`
 
 	secret := &Secret{}
 	err := s.db.Pool.QueryRow(ctx, query, name).Scan(
 		&secret.ID, &secret.Name, &secret.EncryptedValue, &secret.Description,
 		&secret.Scope, &secret.RotationIntervalDays, &secret.LastRotatedAt,
-		&secret.ExpiresAt, &secret.CreatedBy, &secret.CreatedAt, &secret.UpdatedAt,
+		&secret.ExpiresAt, &secret.CreatedBy, &secret.OwnerType, &secret.OwnerID,
+		&secret.AgentID, &secret.CreatedAt, &secret.UpdatedAt,
 	)
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -91,7 +104,7 @@ func (s *SecretStore) GetByName(ctx context.Context, name string) (*Secret, erro
 func (s *SecretStore) List(ctx context.Context) ([]Secret, error) {
 	query := `
 		SELECT id, name, description, scope, rotation_interval_days,
-		       last_rotated_at, expires_at, created_by, created_at, updated_at
+		       last_rotated_at, expires_at, created_by, owner_type, owner_id, agent_id, created_at, updated_at
 		FROM vault_secrets ORDER BY name`
 
 	rows, err := s.db.Pool.Query(ctx, query)
@@ -105,7 +118,8 @@ func (s *SecretStore) List(ctx context.Context) ([]Secret, error) {
 		var s Secret
 		if err := rows.Scan(
 			&s.ID, &s.Name, &s.Description, &s.Scope, &s.RotationIntervalDays,
-			&s.LastRotatedAt, &s.ExpiresAt, &s.CreatedBy, &s.CreatedAt, &s.UpdatedAt,
+			&s.LastRotatedAt, &s.ExpiresAt, &s.CreatedBy, &s.OwnerType, &s.OwnerID,
+			&s.AgentID, &s.CreatedAt, &s.UpdatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("scanning secret: %w", err)
 		}
@@ -170,11 +184,20 @@ func (s *SecretStore) Rotate(ctx context.Context, name, newEncryptedValue, rotat
 	return tx.Commit(ctx)
 }
 
-// CanAccess checks if an agent has access to a secret.
+// CanAccess checks if an agent has access to a secret (legacy scope-based access).
+// Kept for backward compatibility.
 func (s *SecretStore) CanAccess(secret *Secret, agentID string) bool {
+	// Warren always has access (admin)
 	if agentID == "warren" {
 		return true
 	}
+	
+	// Check legacy agent_id field first
+	if secret.AgentID != nil && *secret.AgentID == agentID {
+		return true
+	}
+	
+	// Check scope field
 	if len(secret.Scope) == 0 {
 		return false // admin-only
 	}
