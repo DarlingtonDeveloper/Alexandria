@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/warrentherabbit/alexandria/internal/hermes"
-	"github.com/warrentherabbit/alexandria/internal/store"
+	"github.com/MikeSquared-Agency/Alexandria/internal/hermes"
+	"github.com/MikeSquared-Agency/Alexandria/internal/store"
 )
 
 // HealthHandler provides health and stats endpoints.

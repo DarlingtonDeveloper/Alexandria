@@ -7,9 +7,9 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 
-	"github.com/warrentherabbit/alexandria/internal/identity"
-	"github.com/warrentherabbit/alexandria/internal/middleware"
-	"github.com/warrentherabbit/alexandria/internal/store"
+	"github.com/MikeSquared-Agency/Alexandria/internal/identity"
+	"github.com/MikeSquared-Agency/Alexandria/internal/middleware"
+	"github.com/MikeSquared-Agency/Alexandria/internal/store"
 )
 
 // IdentityHandler provides identity resolution endpoints.

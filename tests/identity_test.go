@@ -5,7 +5,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/warrentherabbit/alexandria/internal/identity"
+	"github.com/MikeSquared-Agency/Alexandria/internal/identity"
 )
 
 func TestResolveRequest_Validation(t *testing.T) {

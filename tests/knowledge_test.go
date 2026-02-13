@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/warrentherabbit/alexandria/internal/store"
+	"github.com/MikeSquared-Agency/Alexandria/internal/store"
 )
 
 func TestCanAccess(t *testing.T) {

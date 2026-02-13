@@ -5,8 +5,8 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/warrentherabbit/alexandria/internal/middleware"
-	"github.com/warrentherabbit/alexandria/internal/store"
+	"github.com/MikeSquared-Agency/Alexandria/internal/middleware"
+	"github.com/MikeSquared-Agency/Alexandria/internal/store"
 )
 
 // GrantsHandler provides grants management endpoints.

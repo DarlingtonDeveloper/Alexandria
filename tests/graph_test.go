@@ -3,7 +3,7 @@ package tests
 import (
 	"testing"
 
-	"github.com/warrentherabbit/alexandria/internal/store"
+	"github.com/MikeSquared-Agency/Alexandria/internal/store"
 )
 
 func TestEntityTypes(t *testing.T) {

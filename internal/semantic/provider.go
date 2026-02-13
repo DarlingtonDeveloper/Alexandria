@@ -3,7 +3,7 @@ package semantic
 import (
 	"context"
 
-	"github.com/warrentherabbit/alexandria/internal/embeddings"
+	"github.com/MikeSquared-Agency/Alexandria/internal/embeddings"
 )
 
 // EmbeddingProvider computes vector embeddings from text in batches.

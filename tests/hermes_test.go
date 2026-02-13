@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/warrentherabbit/alexandria/internal/hermes"
+	"github.com/MikeSquared-Agency/Alexandria/internal/hermes"
 )
 
 func TestHermesEventParsing(t *testing.T) {

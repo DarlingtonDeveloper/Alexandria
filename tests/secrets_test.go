@@ -4,9 +4,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/warrentherabbit/alexandria/internal/config"
-	"github.com/warrentherabbit/alexandria/internal/encryption"
-	"github.com/warrentherabbit/alexandria/internal/store"
+	"github.com/MikeSquared-Agency/Alexandria/internal/config"
+	"github.com/MikeSquared-Agency/Alexandria/internal/encryption"
+	"github.com/MikeSquared-Agency/Alexandria/internal/store"
 )
 
 func TestFernetEncryptDecrypt(t *testing.T) {

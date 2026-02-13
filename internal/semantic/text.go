@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/warrentherabbit/alexandria/internal/store"
+	"github.com/MikeSquared-Agency/Alexandria/internal/store"
 )
 
 // EntityText builds embeddable text from a CGEntity's fields.

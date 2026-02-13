@@ -5,7 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/warrentherabbit/alexandria/internal/middleware"
+	"github.com/MikeSquared-Agency/Alexandria/internal/middleware"
 )
 
 func TestAgentAuth_SetsAgentID(t *testing.T) {

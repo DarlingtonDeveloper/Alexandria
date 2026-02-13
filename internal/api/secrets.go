@@ -5,10 +5,10 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/warrentherabbit/alexandria/internal/encryption"
-	"github.com/warrentherabbit/alexandria/internal/hermes"
-	"github.com/warrentherabbit/alexandria/internal/middleware"
-	"github.com/warrentherabbit/alexandria/internal/store"
+	"github.com/MikeSquared-Agency/Alexandria/internal/encryption"
+	"github.com/MikeSquared-Agency/Alexandria/internal/hermes"
+	"github.com/MikeSquared-Agency/Alexandria/internal/middleware"
+	"github.com/MikeSquared-Agency/Alexandria/internal/store"
 )
 
 // SecretHandler provides secret management endpoints.

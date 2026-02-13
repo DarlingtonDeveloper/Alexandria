@@ -7,7 +7,7 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/warrentherabbit/alexandria/internal/store"
+	"github.com/MikeSquared-Agency/Alexandria/internal/store"
 )
 
 // Publisher publishes Alexandria events to Hermes.

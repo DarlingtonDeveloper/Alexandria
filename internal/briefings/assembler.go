@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/warrentherabbit/alexandria/internal/store"
+	"github.com/MikeSquared-Agency/Alexandria/internal/store"
 )
 
 // Assembler builds wake-up briefings for agents.

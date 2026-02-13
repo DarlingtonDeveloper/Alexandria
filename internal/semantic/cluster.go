@@ -7,7 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/pgvector/pgvector-go"
 
-	"github.com/warrentherabbit/alexandria/internal/store"
+	"github.com/MikeSquared-Agency/Alexandria/internal/store"
 )
 
 // detectClusters assigns entities to clusters, recomputes centroids, and detects convergence.

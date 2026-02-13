@@ -12,7 +12,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/warrentherabbit/alexandria/internal/mcpclient"
+	"github.com/MikeSquared-Agency/Alexandria/internal/mcpclient"
 )
 
 // --- JSON-RPC types ---

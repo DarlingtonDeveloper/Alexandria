@@ -5,7 +5,7 @@ import (
 
 	"github.com/pgvector/pgvector-go"
 
-	"github.com/warrentherabbit/alexandria/internal/store"
+	"github.com/MikeSquared-Agency/Alexandria/internal/store"
 )
 
 // embedBatch finds entities needing embeddings and computes them in a batch.

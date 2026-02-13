@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/warrentherabbit/alexandria/internal/semantic"
-	"github.com/warrentherabbit/alexandria/internal/store"
+	"github.com/MikeSquared-Agency/Alexandria/internal/semantic"
+	"github.com/MikeSquared-Agency/Alexandria/internal/store"
 )
 
 func TestEntityText(t *testing.T) {

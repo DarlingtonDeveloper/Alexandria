@@ -7,8 +7,8 @@ import (
 	"log/slog"
 
 	"github.com/nats-io/nats.go"
-	"github.com/warrentherabbit/alexandria/internal/embeddings"
-	"github.com/warrentherabbit/alexandria/internal/store"
+	"github.com/MikeSquared-Agency/Alexandria/internal/embeddings"
+	"github.com/MikeSquared-Agency/Alexandria/internal/store"
 )
 
 // Subscriber listens to Hermes events and auto-captures knowledge.

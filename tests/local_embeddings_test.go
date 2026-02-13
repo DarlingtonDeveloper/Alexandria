@@ -7,7 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/warrentherabbit/alexandria/internal/embeddings"
+	"github.com/MikeSquared-Agency/Alexandria/internal/embeddings"
 )
 
 func TestLocalProvider_Embed(t *testing.T) {

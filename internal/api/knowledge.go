@@ -6,10 +6,10 @@ import (
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/warrentherabbit/alexandria/internal/embeddings"
-	"github.com/warrentherabbit/alexandria/internal/hermes"
-	"github.com/warrentherabbit/alexandria/internal/middleware"
-	"github.com/warrentherabbit/alexandria/internal/store"
+	"github.com/MikeSquared-Agency/Alexandria/internal/embeddings"
+	"github.com/MikeSquared-Agency/Alexandria/internal/hermes"
+	"github.com/MikeSquared-Agency/Alexandria/internal/middleware"
+	"github.com/MikeSquared-Agency/Alexandria/internal/store"
 )
 
 // KnowledgeHandler provides knowledge CRUD and search endpoints.

@@ -11,14 +11,14 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/warrentherabbit/alexandria/internal/config"
-	"github.com/warrentherabbit/alexandria/internal/embeddings"
-	"github.com/warrentherabbit/alexandria/internal/encryption"
-	"github.com/warrentherabbit/alexandria/internal/hermes"
-	"github.com/warrentherabbit/alexandria/internal/identity"
-	"github.com/warrentherabbit/alexandria/internal/semantic"
-	"github.com/warrentherabbit/alexandria/internal/server"
-	"github.com/warrentherabbit/alexandria/internal/store"
+	"github.com/MikeSquared-Agency/Alexandria/internal/config"
+	"github.com/MikeSquared-Agency/Alexandria/internal/embeddings"
+	"github.com/MikeSquared-Agency/Alexandria/internal/encryption"
+	"github.com/MikeSquared-Agency/Alexandria/internal/hermes"
+	"github.com/MikeSquared-Agency/Alexandria/internal/identity"
+	"github.com/MikeSquared-Agency/Alexandria/internal/semantic"
+	"github.com/MikeSquared-Agency/Alexandria/internal/server"
+	"github.com/MikeSquared-Agency/Alexandria/internal/store"
 )
 
 func main() {

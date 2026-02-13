@@ -1,4 +1,4 @@
-module github.com/warrentherabbit/alexandria
+module github.com/MikeSquared-Agency/Alexandria
 
 go 1.24.0
 

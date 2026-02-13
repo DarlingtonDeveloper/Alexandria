@@ -3,7 +3,7 @@ package tests
 import (
 	"testing"
 
-	"github.com/warrentherabbit/alexandria/internal/briefings"
+	"github.com/MikeSquared-Agency/Alexandria/internal/briefings"
 )
 
 func TestBriefingSectionStructure(t *testing.T) {
