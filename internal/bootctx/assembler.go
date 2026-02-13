@@ -29,8 +29,8 @@ type AgentProfile struct {
 // agentProfiles maps known agent names to their scope rules.
 var agentProfiles = map[string]AgentProfile{
 	"kai":         {Access: FullAccess},
-	"lily":        {OwnerID: "mike-a", Access: ScopedAccess},
-	"scout":       {OwnerID: "mike-d", Access: ScopedAccess},
+	"lily":        {OwnerID: "+447873283753", Access: ScopedAccess},
+	"scout":       {OwnerID: "+447444361435", Access: ScopedAccess},
 	"dutybound":   {ExtraTags: []string{"ci", "workflow", "repo"}},
 	"celebrimbor": {ExtraTags: []string{"souls", "promptforge", "design"}},
 }
