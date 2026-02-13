@@ -15,6 +15,8 @@ import (
 	"github.com/warrentherabbit/alexandria/internal/embeddings"
 	"github.com/warrentherabbit/alexandria/internal/encryption"
 	"github.com/warrentherabbit/alexandria/internal/hermes"
+	"github.com/warrentherabbit/alexandria/internal/identity"
+	"github.com/warrentherabbit/alexandria/internal/semantic"
 	"github.com/warrentherabbit/alexandria/internal/server"
 	"github.com/warrentherabbit/alexandria/internal/store"
 )
@@ -103,8 +105,20 @@ func main() {
 		}
 	}
 
+	// Identity resolver
+	resolver := identity.NewResolver(db)
+
+	// Semantic worker (optional)
+	if cfg.SemanticEnabled {
+		semCfg := semantic.ConfigFromEnv()
+		provider := semantic.NewProviderAdapter(embedder)
+		worker := semantic.NewWorker(db, provider, semCfg, logger)
+		worker.Start(ctx)
+		logger.Info("semantic worker started")
+	}
+
 	// Server
-	srv := server.New(cfg, db, hermesClient, embedder, encryptor, logger)
+	srv := server.New(cfg, db, hermesClient, embedder, encryptor, resolver, logger)
 
 	httpServer := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.Port),
