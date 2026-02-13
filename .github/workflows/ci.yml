@@ -55,6 +55,7 @@ jobs:
           DATABASE_URL: postgres://test:test@localhost:5432/e2e_test?sslmode=disable
           ALEXANDRIA_PORT: "8500"
           ENCRYPTION_KEY: dGVzdC1rZXktMzItYnl0ZXMtbG9uZy4u
+          EMBEDDING_BACKEND: simple
       - name: Wait for health
         run: |
           for i in $(seq 1 30); do
