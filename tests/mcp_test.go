@@ -12,7 +12,7 @@ import (
 func TestMCPServer_Initialize(t *testing.T) {
 	// Build the binary
 	buildCmd := exec.Command("go", "build", "-o", "/tmp/alexandria-mcp-test", "./cmd/alexandria-mcp")
-	buildCmd.Dir = "/home/mike/Alexandria"
+	buildCmd.Dir = ".."
 	if out, err := buildCmd.CombinedOutput(); err != nil {
 		t.Fatalf("build failed: %v\n%s", err, out)
 	}
@@ -67,7 +67,7 @@ func TestMCPServer_Initialize(t *testing.T) {
 // TestMCPServer_ToolsList verifies the MCP server returns the expected tool definitions.
 func TestMCPServer_ToolsList(t *testing.T) {
 	buildCmd := exec.Command("go", "build", "-o", "/tmp/alexandria-mcp-test", "./cmd/alexandria-mcp")
-	buildCmd.Dir = "/home/mike/Alexandria"
+	buildCmd.Dir = ".."
 	if out, err := buildCmd.CombinedOutput(); err != nil {
 		t.Fatalf("build failed: %v\n%s", err, out)
 	}
@@ -129,7 +129,7 @@ func TestMCPServer_ToolsList(t *testing.T) {
 // TestMCPServer_UnknownMethod verifies the server returns method-not-found for unknown methods.
 func TestMCPServer_UnknownMethod(t *testing.T) {
 	buildCmd := exec.Command("go", "build", "-o", "/tmp/alexandria-mcp-test", "./cmd/alexandria-mcp")
-	buildCmd.Dir = "/home/mike/Alexandria"
+	buildCmd.Dir = ".."
 	if out, err := buildCmd.CombinedOutput(); err != nil {
 		t.Fatalf("build failed: %v\n%s", err, out)
 	}
