@@ -320,7 +320,7 @@ func handleSearch(ctx context.Context, client *mcpclient.Client, args json.RawMe
 		EntityType string `json:"entity_type"`
 	}
 	if args != nil {
-		json.Unmarshal(args, &params)
+		_ = json.Unmarshal(args, &params)
 	}
 	result, err := client.ListEntities(ctx, params.EntityType)
 	if err != nil {

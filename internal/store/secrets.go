@@ -154,7 +154,7 @@ func (s *SecretStore) Rotate(ctx context.Context, name, newEncryptedValue, rotat
 	if err != nil {
 		return fmt.Errorf("beginning transaction: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	// Get current secret
 	var secretID, oldValue string
