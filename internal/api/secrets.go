@@ -284,7 +284,7 @@ func (h *SecretHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Clean up associated access grants
-	h.grants.DeleteByResource(r.Context(), "secret", name)
+	_ = h.grants.DeleteByResource(r.Context(), "secret", name)
 
 	h.audit.Log(r.Context(), store.ActionSecretDelete, agentID, &name, nil, true, nil)
 	writeSuccess(w, http.StatusOK, map[string]string{"deleted": name})

@@ -224,7 +224,6 @@ func (s *KnowledgeStore) List(ctx context.Context, filter KnowledgeFilter) ([]Kn
 		argN, argN+1,
 	))
 	args = append(args, filter.AgentID, filter.AgentID)
-	argN += 2
 
 	limit := filter.Limit
 	if limit <= 0 || limit > 100 {
@@ -425,8 +424,6 @@ func (s *KnowledgeStore) Search(ctx context.Context, input SearchInput) ([]Searc
 
 	// Embedding parameter
 	embeddingArgN := argN
-	args = append(args, input.QueryEmbedding)
-	argN++
 
 	limit := input.Limit
 	if limit <= 0 || limit > 100 {

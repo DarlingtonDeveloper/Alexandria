@@ -27,8 +27,8 @@ func (h *SemanticHandler) Status(w http.ResponseWriter, r *http.Request) {
 
 	var entitiesTotal, entitiesEmbedded, clustersActive, proposalsPending int
 
-	h.db.Pool.QueryRow(r.Context(), `SELECT COUNT(*) FROM vault_entities WHERE deleted_at IS NULL`).Scan(&entitiesTotal)
-	h.db.Pool.QueryRow(r.Context(), `SELECT COUNT(*) FROM vault_entity_embeddings`).Scan(&entitiesEmbedded)
+	_ = h.db.Pool.QueryRow(r.Context(), `SELECT COUNT(*) FROM vault_entities WHERE deleted_at IS NULL`).Scan(&entitiesTotal)
+	_ = h.db.Pool.QueryRow(r.Context(), `SELECT COUNT(*) FROM vault_entity_embeddings`).Scan(&entitiesEmbedded)
 
 	clusters, _ := store.ListActiveClusters(r.Context(), db)
 	clustersActive = len(clusters)

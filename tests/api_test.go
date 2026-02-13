@@ -11,7 +11,7 @@ import (
 func TestAgentAuth_SetsAgentID(t *testing.T) {
 	handler := middleware.AgentAuth("")(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		agentID := middleware.AgentIDFromContext(r.Context())
-		w.Write([]byte(agentID))
+		_, _ = w.Write([]byte(agentID))
 	}))
 
 	req := httptest.NewRequest("GET", "/test", nil)
@@ -28,7 +28,7 @@ func TestAgentAuth_SetsAgentID(t *testing.T) {
 func TestAgentAuth_DefaultsToAnonymous(t *testing.T) {
 	handler := middleware.AgentAuth("")(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		agentID := middleware.AgentIDFromContext(r.Context())
-		w.Write([]byte(agentID))
+		_, _ = w.Write([]byte(agentID))
 	}))
 
 	req := httptest.NewRequest("GET", "/test", nil)

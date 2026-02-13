@@ -55,7 +55,7 @@ func TestVaultEventMarshaling(t *testing.T) {
 	}
 
 	var parsed map[string]any
-	json.Unmarshal(data, &parsed)
+	_ = json.Unmarshal(data, &parsed)
 
 	if parsed["type"] != "vault.knowledge.created" {
 		t.Errorf("unexpected type: %v", parsed["type"])

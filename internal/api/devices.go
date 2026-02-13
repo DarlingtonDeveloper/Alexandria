@@ -50,7 +50,7 @@ func (h *DevicesHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Log the action
-	h.audit.Log(r.Context(), "device.create", agentID, &device.ID, nil, true, nil)
+	_ = h.audit.Log(r.Context(), "device.create", agentID, &device.ID, nil, true, nil)
 
 	writeSuccess(w, http.StatusCreated, device)
 }
@@ -115,7 +115,7 @@ func (h *DevicesHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Log the action
-	h.audit.Log(r.Context(), "device.update", agentID, &id, nil, true, nil)
+	_ = h.audit.Log(r.Context(), "device.update", agentID, &id, nil, true, nil)
 
 	writeSuccess(w, http.StatusOK, device)
 }
