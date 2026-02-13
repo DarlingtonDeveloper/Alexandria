@@ -103,6 +103,13 @@ All requests should include `X-Agent-ID` header identifying the calling agent.
 |--------|------|-------------|
 | GET | `/briefings/{agent_id}?since=ISO8601&max_items=50` | Generate wake-up briefing |
 
+### Boot Context
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/context/{agent_id}` | Generate agent-specific boot context (returns `text/markdown`) |
+
+The boot context endpoint assembles a markdown document with sections for the agent's owner, known people, peer agents, accessible secrets/channels, operational rules, and infrastructure services. Each agent has a profile that controls scope (e.g. `kai` sees everything, `lily` is scoped to owner `mike-a`).
+
 ### Knowledge Graph
 | Method | Path | Description |
 |--------|------|-------------|

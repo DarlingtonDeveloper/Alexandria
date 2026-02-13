@@ -127,3 +127,15 @@ func (p *Publisher) BriefingGenerated(ctx context.Context, agentID string, itemC
 		},
 	})
 }
+
+// ContextGenerated publishes a boot-context generation event.
+func (p *Publisher) ContextGenerated(ctx context.Context, agentID string) error {
+	return p.publish(ctx, "swarm.vault.context.generated", VaultEvent{
+		Type:      "vault.context.generated",
+		Source:    "alexandria",
+		Timestamp: time.Now(),
+		Data: map[string]any{
+			"agent_id": agentID,
+		},
+	})
+}

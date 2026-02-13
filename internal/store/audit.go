@@ -19,6 +19,7 @@ const (
 	ActionSecretDelete    AccessAction = "secret.delete"
 	ActionSecretRotate    AccessAction = "secret.rotate"
 	ActionBriefingGen     AccessAction = "briefing.generate"
+	ActionContextGen      AccessAction = "context.generate"
 	ActionGraphRead        AccessAction = "graph.read"
 	ActionGraphWrite       AccessAction = "graph.write"
 	ActionIdentityResolve  AccessAction = "identity.resolve"
