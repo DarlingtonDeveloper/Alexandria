@@ -51,7 +51,7 @@ func (h *GraphHandler) ListEntities(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.audit.Log(r.Context(), store.ActionGraphRead, agentID, nil, nil, true, nil)
+	_ = h.audit.Log(r.Context(), store.ActionGraphRead, agentID, nil, nil, true, nil)
 	writeSuccess(w, http.StatusOK, entities)
 }
 
@@ -76,7 +76,7 @@ func (h *GraphHandler) GetEntity(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.audit.Log(r.Context(), store.ActionGraphRead, agentID, &id, nil, true, nil)
+	_ = h.audit.Log(r.Context(), store.ActionGraphRead, agentID, &id, nil, true, nil)
 	writeSuccess(w, http.StatusOK, map[string]any{
 		"entity":        entity,
 		"relationships": rels,
@@ -101,7 +101,7 @@ func (h *GraphHandler) GetRelatedEntities(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	h.audit.Log(r.Context(), store.ActionGraphRead, agentID, &id, nil, true, nil)
+	_ = h.audit.Log(r.Context(), store.ActionGraphRead, agentID, &id, nil, true, nil)
 	writeSuccess(w, http.StatusOK, map[string]any{
 		"entities":      entities,
 		"relationships": rels,
@@ -136,7 +136,7 @@ func (h *GraphHandler) CreateEntity(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.audit.Log(r.Context(), store.ActionGraphWrite, agentID, &entity.ID, nil, true, nil)
+	_ = h.audit.Log(r.Context(), store.ActionGraphWrite, agentID, &entity.ID, nil, true, nil)
 	writeSuccess(w, http.StatusCreated, entity)
 }
 
@@ -174,6 +174,6 @@ func (h *GraphHandler) CreateRelationship(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	h.audit.Log(r.Context(), store.ActionGraphWrite, agentID, &rel.ID, nil, true, nil)
+	_ = h.audit.Log(r.Context(), store.ActionGraphWrite, agentID, &rel.ID, nil, true, nil)
 	writeSuccess(w, http.StatusCreated, rel)
 }

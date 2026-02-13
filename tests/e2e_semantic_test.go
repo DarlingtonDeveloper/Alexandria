@@ -38,7 +38,7 @@ func TestE2E_SemanticStatus(t *testing.T) {
 			EmbeddingGap     int `json:"embedding_gap"`
 		} `json:"data"`
 	}
-	json.NewDecoder(resp.Body).Decode(&result)
+	_ = json.NewDecoder(resp.Body).Decode(&result)
 
 	// Counts should be non-negative
 	if result.Data.EntitiesTotal < 0 {
@@ -74,7 +74,7 @@ func TestE2E_SemanticClusters(t *testing.T) {
 	var result struct {
 		Data []any `json:"data"`
 	}
-	json.NewDecoder(resp.Body).Decode(&result)
+	_ = json.NewDecoder(resp.Body).Decode(&result)
 
 	// Should return array (possibly empty)
 	if result.Data == nil {
@@ -98,7 +98,7 @@ func TestE2E_SemanticProposals(t *testing.T) {
 	var result struct {
 		Data []any `json:"data"`
 	}
-	json.NewDecoder(resp.Body).Decode(&result)
+	_ = json.NewDecoder(resp.Body).Decode(&result)
 
 	if result.Data == nil {
 		t.Error("expected data to be an array, got nil")

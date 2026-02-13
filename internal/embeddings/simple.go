@@ -36,7 +36,7 @@ func (p *SimpleProvider) Embed(_ context.Context, text string) (pgvector.Vector,
 	// Hash each word to a dimension and accumulate
 	for _, word := range words {
 		h := fnv.New64a()
-		h.Write([]byte(word))
+		_, _ = h.Write([]byte(word))
 		idx := h.Sum64() % uint64(Dimensions)
 		vec[idx] += 1.0
 
@@ -48,7 +48,7 @@ func (p *SimpleProvider) Embed(_ context.Context, text string) (pgvector.Vector,
 	for i := 0; i < len(words)-1; i++ {
 		bigram := words[i] + " " + words[i+1]
 		h := fnv.New64a()
-		h.Write([]byte(bigram))
+		_, _ = h.Write([]byte(bigram))
 		idx := h.Sum64() % uint64(Dimensions)
 		vec[idx] += 0.5
 	}

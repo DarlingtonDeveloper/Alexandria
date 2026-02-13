@@ -35,7 +35,7 @@ func (rl *RateLimiter) Middleware(next http.Handler) http.Handler {
 		if !rl.allow(agentID) {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusTooManyRequests)
-			json.NewEncoder(w).Encode(map[string]any{
+			_ = json.NewEncoder(w).Encode(map[string]any{
 				"error": map[string]any{
 					"code":    "RATE_LIMITED",
 					"message": "Too many requests. Try again later.",

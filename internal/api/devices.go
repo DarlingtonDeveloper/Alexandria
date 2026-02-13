@@ -136,7 +136,7 @@ func (h *DevicesHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Log the action
-	h.audit.Log(r.Context(), "device.delete", agentID, &id, nil, true, nil)
+	_ = h.audit.Log(r.Context(), "device.delete", agentID, &id, nil, true, nil)
 
 	writeSuccess(w, http.StatusOK, map[string]string{"deleted": id})
 }

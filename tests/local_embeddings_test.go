@@ -83,7 +83,7 @@ func TestLocalProvider_ServerError(t *testing.T) {
 func TestLocalProvider_EmptyResponse(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(struct {
+		_ = json.NewEncoder(w).Encode(struct {
 			Embeddings [][]float32 `json:"embeddings"`
 		}{Embeddings: [][]float32{}})
 	}))

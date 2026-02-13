@@ -82,7 +82,7 @@ func TestE2E_SecretLifecycle(t *testing.T) {
 			Value string `json:"value"`
 		} `json:"data"`
 	}
-	json.NewDecoder(resp.Body).Decode(&readResult)
+	_ = json.NewDecoder(resp.Body).Decode(&readResult)
 	if readResult.Data.Value != secretValue {
 		t.Errorf("read: expected value %q, got %q", secretValue, readResult.Data.Value)
 	}
@@ -105,7 +105,7 @@ func TestE2E_SecretLifecycle(t *testing.T) {
 		t.Fatalf("read-after-update: expected 200, got %d: %s", resp.StatusCode, b)
 	}
 
-	json.NewDecoder(resp.Body).Decode(&readResult)
+	_ = json.NewDecoder(resp.Body).Decode(&readResult)
 	if readResult.Data.Value != "updated-e2e-value" {
 		t.Errorf("read-after-update: expected 'updated-e2e-value', got %q", readResult.Data.Value)
 	}
@@ -192,7 +192,7 @@ func TestE2E_SecretRotation(t *testing.T) {
 			Value string `json:"value"`
 		} `json:"data"`
 	}
-	json.NewDecoder(resp.Body).Decode(&result)
+	_ = json.NewDecoder(resp.Body).Decode(&result)
 	if result.Data.Value != "rotated-value" {
 		t.Errorf("expected 'rotated-value', got %q", result.Data.Value)
 	}
@@ -211,7 +211,7 @@ func TestE2E_HealthEndpoint(t *testing.T) {
 	}
 
 	var result map[string]any
-	json.NewDecoder(resp.Body).Decode(&result)
+	_ = json.NewDecoder(resp.Body).Decode(&result)
 	if result["status"] != "healthy" {
 		t.Errorf("expected status 'healthy', got %v", result["status"])
 	}

@@ -54,7 +54,7 @@ func (h *BriefingHandler) Generate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.audit.Log(r.Context(), store.ActionBriefingGen, requestingAgent, &targetAgent, nil, true, nil)
+	_ = h.audit.Log(r.Context(), store.ActionBriefingGen, requestingAgent, &targetAgent, nil, true, nil)
 
 	if h.publisher != nil {
 		itemCount := 0

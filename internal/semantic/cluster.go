@@ -97,7 +97,7 @@ func (w *Worker) recomputeCentroids(ctx context.Context) error {
 			continue
 		}
 		if len(members) == 0 {
-			store.DissolveCluster(ctx, db, cluster.ID)
+			_ = store.DissolveCluster(ctx, db, cluster.ID)
 			continue
 		}
 
@@ -114,7 +114,7 @@ func (w *Worker) recomputeCentroids(ctx context.Context) error {
 		}
 
 		centroid := averageVectors(vectors)
-		store.UpdateClusterCentroid(ctx, db, cluster.ID, pgvector.NewVector(centroid))
+		_ = store.UpdateClusterCentroid(ctx, db, cluster.ID, pgvector.NewVector(centroid))
 	}
 	return nil
 }
@@ -152,7 +152,7 @@ func (w *Worker) detectConvergence(ctx context.Context) error {
 						ClusterBID:   &cj.ID,
 						Status:       "pending",
 					}
-					store.CreateMergeProposal(ctx, db, proposal)
+					_ = store.CreateMergeProposal(ctx, db, proposal)
 				}
 			}
 		}
@@ -168,13 +168,13 @@ func (w *Worker) mergeClusters(ctx context.Context, keepID, dissolveID uuid.UUID
 	}
 
 	for _, m := range members {
-		store.RemoveClusterMember(ctx, db, m.EntityID, dissolveID)
+		_ = store.RemoveClusterMember(ctx, db, m.EntityID, dissolveID)
 		newMembership := &store.ClusterMembership{
 			EntityID:  m.EntityID,
 			ClusterID: keepID,
 			Distance:  m.Distance,
 		}
-		store.AddClusterMember(ctx, db, newMembership)
+		_ = store.AddClusterMember(ctx, db, newMembership)
 	}
 
 	return store.DissolveCluster(ctx, db, dissolveID)

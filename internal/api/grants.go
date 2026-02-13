@@ -70,7 +70,7 @@ func (h *GrantsHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Log the action
-	h.audit.Log(r.Context(), "grant.create", agentID, &grant.ID, nil, true, nil)
+	_ = h.audit.Log(r.Context(), "grant.create", agentID, &grant.ID, nil, true, nil)
 
 	writeSuccess(w, http.StatusCreated, grant)
 }
@@ -170,7 +170,7 @@ func (h *GrantsHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Log the action
-	h.audit.Log(r.Context(), "grant.delete", agentID, &id, nil, true, nil)
+	_ = h.audit.Log(r.Context(), "grant.delete", agentID, &id, nil, true, nil)
 
 	writeSuccess(w, http.StatusOK, map[string]string{"deleted": id})
 }

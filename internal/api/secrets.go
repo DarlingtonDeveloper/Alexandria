@@ -127,7 +127,7 @@ func (h *SecretHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.audit.Log(r.Context(), store.ActionSecretWrite, agentID, &secret.Name, nil, true, nil)
+	_ = h.audit.Log(r.Context(), store.ActionSecretWrite, agentID, &secret.Name, nil, true, nil)
 	writeSuccess(w, http.StatusCreated, secret)
 }
 
@@ -171,14 +171,14 @@ func (h *SecretHandler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if secret == nil {
-		h.audit.Log(r.Context(), store.ActionSecretRead, agentID, &name, nil, false, nil)
+		_ = h.audit.Log(r.Context(), store.ActionSecretRead, agentID, &name, nil, false, nil)
 		writeError(w, http.StatusNotFound, "SECRET_NOT_FOUND", "No secret with name '"+name+"'")
 		return
 	}
 
 	hasAccess, subjectID := h.checkSecretAccess(r, secret, "read")
 	if !hasAccess {
-		h.audit.Log(r.Context(), store.ActionSecretRead, agentID, &name, nil, false, nil)
+		_ = h.audit.Log(r.Context(), store.ActionSecretRead, agentID, &name, nil, false, nil)
 		if h.publisher != nil {
 			_ = h.publisher.SecretAccessed(r.Context(), subjectID, name, false)
 		}
@@ -193,7 +193,7 @@ func (h *SecretHandler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.audit.Log(r.Context(), store.ActionSecretRead, agentID, &name, nil, true, nil)
+	_ = h.audit.Log(r.Context(), store.ActionSecretRead, agentID, &name, nil, true, nil)
 	if h.publisher != nil {
 		_ = h.publisher.SecretAccessed(r.Context(), subjectID, name, true)
 	}
@@ -248,7 +248,7 @@ func (h *SecretHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.audit.Log(r.Context(), store.ActionSecretWrite, agentID, &name, nil, true, nil)
+	_ = h.audit.Log(r.Context(), store.ActionSecretWrite, agentID, &name, nil, true, nil)
 	writeSuccess(w, http.StatusOK, map[string]string{"updated": name})
 }
 
@@ -286,7 +286,7 @@ func (h *SecretHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	// Clean up associated access grants
 	_ = h.grants.DeleteByResource(r.Context(), "secret", name)
 
-	h.audit.Log(r.Context(), store.ActionSecretDelete, agentID, &name, nil, true, nil)
+	_ = h.audit.Log(r.Context(), store.ActionSecretDelete, agentID, &name, nil, true, nil)
 	writeSuccess(w, http.StatusOK, map[string]string{"deleted": name})
 }
 
@@ -334,7 +334,7 @@ func (h *SecretHandler) Rotate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.audit.Log(r.Context(), store.ActionSecretRotate, agentID, &name, nil, true, nil)
+	_ = h.audit.Log(r.Context(), store.ActionSecretRotate, agentID, &name, nil, true, nil)
 	if h.publisher != nil {
 		_ = h.publisher.SecretRotated(r.Context(), name, agentID)
 	}

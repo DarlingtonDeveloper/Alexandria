@@ -40,7 +40,7 @@ func (h *IdentityHandler) Resolve(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.audit.Log(r.Context(), store.ActionIdentityResolve, agentID, nil, nil, true, map[string]any{
+	_ = h.audit.Log(r.Context(), store.ActionIdentityResolve, agentID, nil, nil, true, map[string]any{
 		"alias_type":  req.AliasType,
 		"alias_value": req.AliasValue,
 		"outcome":     result.Outcome,
@@ -73,7 +73,7 @@ func (h *IdentityHandler) Merge(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.audit.Log(r.Context(), store.ActionIdentityMerge, agentID, nil, nil, true, map[string]any{
+	_ = h.audit.Log(r.Context(), store.ActionIdentityMerge, agentID, nil, nil, true, map[string]any{
 		"survivor_id": req.SurvivorID,
 		"merged_id":   req.MergedID,
 	})

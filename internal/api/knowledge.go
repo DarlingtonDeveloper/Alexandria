@@ -105,7 +105,7 @@ func (h *KnowledgeHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Audit
-	h.audit.Log(r.Context(), store.ActionKnowledgeWrite, agentID, &entry.ID, nil, true, nil)
+	_ = h.audit.Log(r.Context(), store.ActionKnowledgeWrite, agentID, &entry.ID, nil, true, nil)
 
 	// Publish event
 	if h.publisher != nil {
@@ -153,7 +153,7 @@ func (h *KnowledgeHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.audit.Log(r.Context(), store.ActionKnowledgeRead, agentID, nil, nil, true, nil)
+	_ = h.audit.Log(r.Context(), store.ActionKnowledgeRead, agentID, nil, nil, true, nil)
 	writeSuccess(w, http.StatusOK, entries)
 }
 
@@ -172,7 +172,7 @@ func (h *KnowledgeHandler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.audit.Log(r.Context(), store.ActionKnowledgeRead, agentID, &id, nil, true, nil)
+	_ = h.audit.Log(r.Context(), store.ActionKnowledgeRead, agentID, &id, nil, true, nil)
 	writeSuccess(w, http.StatusOK, entry)
 }
 
@@ -209,7 +209,7 @@ func (h *KnowledgeHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.audit.Log(r.Context(), store.ActionKnowledgeWrite, agentID, &id, nil, true, nil)
+	_ = h.audit.Log(r.Context(), store.ActionKnowledgeWrite, agentID, &id, nil, true, nil)
 
 	if h.publisher != nil {
 		_ = h.publisher.KnowledgeUpdated(r.Context(), entry)
@@ -236,7 +236,7 @@ func (h *KnowledgeHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.audit.Log(r.Context(), store.ActionKnowledgeDelete, agentID, &id, nil, true, nil)
+	_ = h.audit.Log(r.Context(), store.ActionKnowledgeDelete, agentID, &id, nil, true, nil)
 	writeSuccess(w, http.StatusOK, map[string]string{"deleted": id})
 }
 
@@ -286,7 +286,7 @@ func (h *KnowledgeHandler) Search(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.audit.Log(r.Context(), store.ActionKnowledgeSearch, agentID, nil, nil, true, map[string]any{
+	_ = h.audit.Log(r.Context(), store.ActionKnowledgeSearch, agentID, nil, nil, true, map[string]any{
 		"query":        req.Query,
 		"result_count": len(results),
 	})
@@ -359,7 +359,7 @@ func (h *KnowledgeHandler) BatchCreate(w http.ResponseWriter, r *http.Request) {
 		created = append(created, result)
 	}
 
-	h.audit.Log(r.Context(), store.ActionKnowledgeWrite, agentID, nil, nil, true, map[string]any{
+	_ = h.audit.Log(r.Context(), store.ActionKnowledgeWrite, agentID, nil, nil, true, map[string]any{
 		"batch_size": len(req.Entries),
 		"created":    len(created),
 	})

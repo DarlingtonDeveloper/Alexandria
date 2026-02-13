@@ -39,7 +39,7 @@ func TestE2E_IdentityResolveCreate(t *testing.T) {
 			Outcome  string `json:"outcome"`
 		} `json:"data"`
 	}
-	json.NewDecoder(resp.Body).Decode(&result)
+	_ = json.NewDecoder(resp.Body).Decode(&result)
 
 	if result.Data.Outcome != "created" {
 		t.Errorf("expected outcome 'created', got '%s'", result.Data.Outcome)
@@ -78,7 +78,7 @@ func TestE2E_IdentityResolveMatch(t *testing.T) {
 			Outcome  string `json:"outcome"`
 		} `json:"data"`
 	}
-	json.NewDecoder(resp.Body).Decode(&result)
+	_ = json.NewDecoder(resp.Body).Decode(&result)
 
 	if result.Data.Outcome != "matched" {
 		t.Errorf("expected outcome 'matched', got '%s'", result.Data.Outcome)
@@ -114,7 +114,7 @@ func TestE2E_IdentityEntityLookup(t *testing.T) {
 			EntityID string `json:"entity_id"`
 		} `json:"data"`
 	}
-	json.NewDecoder(resp.Body).Decode(&resolveResult)
+	_ = json.NewDecoder(resp.Body).Decode(&resolveResult)
 	resp.Body.Close()
 
 	if resolveResult.Data.EntityID == "" {
@@ -142,7 +142,7 @@ func TestE2E_IdentityEntityLookup(t *testing.T) {
 			EdgesTo   []any `json:"edges_to"`
 		} `json:"data"`
 	}
-	json.NewDecoder(resp.Body).Decode(&lookupResult)
+	_ = json.NewDecoder(resp.Body).Decode(&lookupResult)
 
 	if lookupResult.Data.Entity.ID != resolveResult.Data.EntityID {
 		t.Errorf("entity ID mismatch: %s vs %s", lookupResult.Data.Entity.ID, resolveResult.Data.EntityID)
@@ -174,7 +174,7 @@ func TestE2E_IdentityPending(t *testing.T) {
 	var result struct {
 		Data []any `json:"data"`
 	}
-	json.NewDecoder(resp.Body).Decode(&result)
+	_ = json.NewDecoder(resp.Body).Decode(&result)
 
 	// Should return array (possibly empty)
 	if result.Data == nil {
@@ -193,7 +193,7 @@ func TestE2E_IdentityMerge(t *testing.T) {
 	var r1 struct {
 		Data struct{ EntityID string `json:"entity_id"` } `json:"data"`
 	}
-	json.NewDecoder(resp.Body).Decode(&r1)
+	_ = json.NewDecoder(resp.Body).Decode(&r1)
 	resp.Body.Close()
 
 	body2 := `{"alias_type":"email","alias_value":"e2e-merge-b@example.com","entity_type":"person","display_name":"Merge B","source":"e2e-test"}`
@@ -201,7 +201,7 @@ func TestE2E_IdentityMerge(t *testing.T) {
 	var r2 struct {
 		Data struct{ EntityID string `json:"entity_id"` } `json:"data"`
 	}
-	json.NewDecoder(resp.Body).Decode(&r2)
+	_ = json.NewDecoder(resp.Body).Decode(&r2)
 	resp.Body.Close()
 
 	if r1.Data.EntityID == "" || r2.Data.EntityID == "" {
@@ -224,7 +224,7 @@ func TestE2E_IdentityMerge(t *testing.T) {
 			MergedID   string `json:"merged_id"`
 		} `json:"data"`
 	}
-	json.NewDecoder(resp.Body).Decode(&mergeResult)
+	_ = json.NewDecoder(resp.Body).Decode(&mergeResult)
 
 	if mergeResult.Data.SurvivorID != r1.Data.EntityID {
 		t.Errorf("survivor ID mismatch: %s vs %s", mergeResult.Data.SurvivorID, r1.Data.EntityID)
@@ -242,7 +242,7 @@ func TestE2E_IdentityMerge(t *testing.T) {
 			} `json:"aliases"`
 		} `json:"data"`
 	}
-	json.NewDecoder(resp.Body).Decode(&lookup)
+	_ = json.NewDecoder(resp.Body).Decode(&lookup)
 	resp.Body.Close()
 
 	aliasValues := make(map[string]bool)

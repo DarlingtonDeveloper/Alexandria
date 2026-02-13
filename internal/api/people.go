@@ -50,7 +50,7 @@ func (h *PeopleHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Log the action
-	h.audit.Log(r.Context(), "person.create", agentID, &person.ID, nil, true, nil)
+	_ = h.audit.Log(r.Context(), "person.create", agentID, &person.ID, nil, true, nil)
 
 	writeSuccess(w, http.StatusCreated, person)
 }
@@ -105,7 +105,7 @@ func (h *PeopleHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Log the action
-	h.audit.Log(r.Context(), "person.update", agentID, &id, nil, true, nil)
+	_ = h.audit.Log(r.Context(), "person.update", agentID, &id, nil, true, nil)
 
 	writeSuccess(w, http.StatusOK, person)
 }
@@ -126,7 +126,7 @@ func (h *PeopleHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Log the action
-	h.audit.Log(r.Context(), "person.delete", agentID, &id, nil, true, nil)
+	_ = h.audit.Log(r.Context(), "person.delete", agentID, &id, nil, true, nil)
 
 	writeSuccess(w, http.StatusOK, map[string]string{"deleted": id})
 }
