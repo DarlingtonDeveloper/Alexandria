@@ -31,7 +31,7 @@ var agentProfiles = map[string]AgentProfile{
 	"kai":         {Access: FullAccess},
 	"lily":        {OwnerID: "+447873283753", Access: ScopedAccess},
 	"scout":       {OwnerID: "+447444361435", Access: ScopedAccess},
-	"dutybound":   {ExtraTags: []string{"ci", "workflow", "repo"}},
+	"dutybound":   {OwnerID: "+447444361435", ExtraTags: []string{"ci", "workflow", "repo"}},
 	"celebrimbor": {ExtraTags: []string{"souls", "promptforge", "design"}},
 }
 
