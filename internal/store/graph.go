@@ -22,23 +22,32 @@ const (
 
 // Entity represents a knowledge graph entity.
 type Entity struct {
-	ID         string         `json:"id"`
-	Name       string         `json:"name"`
-	EntityType EntityType     `json:"entity_type"`
-	Metadata   map[string]any `json:"metadata,omitempty"`
-	CreatedAt  time.Time      `json:"created_at"`
-	UpdatedAt  time.Time      `json:"updated_at"`
+	ID          string         `json:"id"`
+	Name        string         `json:"name"`
+	EntityType  EntityType     `json:"entity_type"`
+	Key         string         `json:"key"`
+	DisplayName string         `json:"display_name"`
+	Summary     string         `json:"summary"`
+	Metadata    map[string]any `json:"metadata,omitempty"`
+	CreatedAt   time.Time      `json:"created_at"`
+	UpdatedAt   time.Time      `json:"updated_at"`
+	DeletedAt   *time.Time     `json:"deleted_at,omitempty"`
 }
 
 // Relationship represents a connection between two entities.
 type Relationship struct {
-	ID               string   `json:"id"`
-	SourceEntityID   string   `json:"source_entity_id"`
-	TargetEntityID   string   `json:"target_entity_id"`
-	RelationshipType string   `json:"relationship_type"`
-	Strength         float64  `json:"strength"`
-	KnowledgeID      *string  `json:"knowledge_id,omitempty"`
-	CreatedAt        time.Time `json:"created_at"`
+	ID               string          `json:"id"`
+	SourceEntityID   string          `json:"source_entity_id"`
+	TargetEntityID   string          `json:"target_entity_id"`
+	RelationshipType string          `json:"relationship_type"`
+	Strength         float64         `json:"strength"`
+	KnowledgeID      *string         `json:"knowledge_id,omitempty"`
+	Confidence       float64         `json:"confidence"`
+	Source           string          `json:"source"`
+	ValidFrom        time.Time       `json:"valid_from"`
+	ValidTo          *time.Time      `json:"valid_to,omitempty"`
+	Metadata         map[string]any  `json:"metadata,omitempty"`
+	CreatedAt        time.Time       `json:"created_at"`
 }
 
 // GraphStore provides knowledge graph operations.
@@ -53,15 +62,17 @@ func NewGraphStore(db *DB) *GraphStore {
 
 // CreateEntity inserts a new entity (upserts on name+type).
 func (s *GraphStore) CreateEntity(ctx context.Context, name string, entityType EntityType, metadata map[string]any) (*Entity, error) {
+	key := string(entityType) + ":" + name
 	query := `
-		INSERT INTO vault_entities (name, entity_type, metadata)
-		VALUES ($1, $2, $3)
+		INSERT INTO vault_entities (name, entity_type, key, display_name, metadata)
+		VALUES ($1, $2, $3, $4, $5)
 		ON CONFLICT (name, entity_type) DO UPDATE SET metadata = EXCLUDED.metadata
-		RETURNING id, name, entity_type, metadata, created_at, updated_at`
+		RETURNING id, name, entity_type, key, display_name, summary, metadata, created_at, updated_at, deleted_at`
 
 	e := &Entity{}
-	err := s.db.Pool.QueryRow(ctx, query, name, entityType, metadata).Scan(
-		&e.ID, &e.Name, &e.EntityType, &e.Metadata, &e.CreatedAt, &e.UpdatedAt,
+	err := s.db.Pool.QueryRow(ctx, query, name, entityType, key, name, metadata).Scan(
+		&e.ID, &e.Name, &e.EntityType, &e.Key, &e.DisplayName, &e.Summary,
+		&e.Metadata, &e.CreatedAt, &e.UpdatedAt, &e.DeletedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("creating entity: %w", err)
@@ -73,8 +84,10 @@ func (s *GraphStore) CreateEntity(ctx context.Context, name string, entityType E
 func (s *GraphStore) GetEntity(ctx context.Context, id string) (*Entity, error) {
 	e := &Entity{}
 	err := s.db.Pool.QueryRow(ctx,
-		`SELECT id, name, entity_type, metadata, created_at, updated_at FROM vault_entities WHERE id = $1`, id,
-	).Scan(&e.ID, &e.Name, &e.EntityType, &e.Metadata, &e.CreatedAt, &e.UpdatedAt)
+		`SELECT id, name, entity_type, key, display_name, summary, metadata, created_at, updated_at, deleted_at
+		 FROM vault_entities WHERE id = $1`, id,
+	).Scan(&e.ID, &e.Name, &e.EntityType, &e.Key, &e.DisplayName, &e.Summary,
+		&e.Metadata, &e.CreatedAt, &e.UpdatedAt, &e.DeletedAt)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, nil
@@ -93,12 +106,12 @@ func (s *GraphStore) ListEntities(ctx context.Context, entityType *EntityType, l
 	var query string
 	var args []any
 	if entityType != nil {
-		query = `SELECT id, name, entity_type, metadata, created_at, updated_at
-			FROM vault_entities WHERE entity_type = $1 ORDER BY name LIMIT $2 OFFSET $3`
+		query = `SELECT id, name, entity_type, key, display_name, summary, metadata, created_at, updated_at, deleted_at
+			FROM vault_entities WHERE entity_type = $1 AND deleted_at IS NULL ORDER BY name LIMIT $2 OFFSET $3`
 		args = []any{*entityType, limit, offset}
 	} else {
-		query = `SELECT id, name, entity_type, metadata, created_at, updated_at
-			FROM vault_entities ORDER BY name LIMIT $1 OFFSET $2`
+		query = `SELECT id, name, entity_type, key, display_name, summary, metadata, created_at, updated_at, deleted_at
+			FROM vault_entities WHERE deleted_at IS NULL ORDER BY name LIMIT $1 OFFSET $2`
 		args = []any{limit, offset}
 	}
 
@@ -111,7 +124,8 @@ func (s *GraphStore) ListEntities(ctx context.Context, entityType *EntityType, l
 	var entities []Entity
 	for rows.Next() {
 		var e Entity
-		if err := rows.Scan(&e.ID, &e.Name, &e.EntityType, &e.Metadata, &e.CreatedAt, &e.UpdatedAt); err != nil {
+		if err := rows.Scan(&e.ID, &e.Name, &e.EntityType, &e.Key, &e.DisplayName, &e.Summary,
+			&e.Metadata, &e.CreatedAt, &e.UpdatedAt, &e.DeletedAt); err != nil {
 			return nil, fmt.Errorf("scanning entity: %w", err)
 		}
 		entities = append(entities, e)
@@ -122,16 +136,18 @@ func (s *GraphStore) ListEntities(ctx context.Context, entityType *EntityType, l
 // CreateRelationship inserts a relationship (upserts on source+target+type).
 func (s *GraphStore) CreateRelationship(ctx context.Context, sourceID, targetID, relType string, strength float64, knowledgeID *string) (*Relationship, error) {
 	query := `
-		INSERT INTO vault_relationships (source_entity_id, target_entity_id, relationship_type, strength, knowledge_id)
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO vault_relationships (source_entity_id, target_entity_id, relationship_type, strength, knowledge_id, confidence)
+		VALUES ($1, $2, $3, $4, $5, $6)
 		ON CONFLICT (source_entity_id, target_entity_id, relationship_type)
-		DO UPDATE SET strength = EXCLUDED.strength, knowledge_id = EXCLUDED.knowledge_id
-		RETURNING id, source_entity_id, target_entity_id, relationship_type, strength, knowledge_id, created_at`
+		DO UPDATE SET strength = EXCLUDED.strength, knowledge_id = EXCLUDED.knowledge_id, confidence = EXCLUDED.confidence
+		RETURNING id, source_entity_id, target_entity_id, relationship_type, strength, knowledge_id,
+		          confidence, source, valid_from, valid_to, metadata, created_at`
 
 	r := &Relationship{}
-	err := s.db.Pool.QueryRow(ctx, query, sourceID, targetID, relType, strength, knowledgeID).Scan(
+	err := s.db.Pool.QueryRow(ctx, query, sourceID, targetID, relType, strength, knowledgeID, strength).Scan(
 		&r.ID, &r.SourceEntityID, &r.TargetEntityID, &r.RelationshipType,
-		&r.Strength, &r.KnowledgeID, &r.CreatedAt,
+		&r.Strength, &r.KnowledgeID, &r.Confidence, &r.Source,
+		&r.ValidFrom, &r.ValidTo, &r.Metadata, &r.CreatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("creating relationship: %w", err)
@@ -142,7 +158,8 @@ func (s *GraphStore) CreateRelationship(ctx context.Context, sourceID, targetID,
 // GetRelationships retrieves all relationships for an entity (both directions).
 func (s *GraphStore) GetRelationships(ctx context.Context, entityID string) ([]Relationship, error) {
 	query := `
-		SELECT id, source_entity_id, target_entity_id, relationship_type, strength, knowledge_id, created_at
+		SELECT id, source_entity_id, target_entity_id, relationship_type, strength, knowledge_id,
+		       confidence, source, valid_from, valid_to, metadata, created_at
 		FROM vault_relationships
 		WHERE source_entity_id = $1 OR target_entity_id = $1
 		ORDER BY strength DESC`
@@ -157,7 +174,8 @@ func (s *GraphStore) GetRelationships(ctx context.Context, entityID string) ([]R
 	for rows.Next() {
 		var r Relationship
 		if err := rows.Scan(&r.ID, &r.SourceEntityID, &r.TargetEntityID, &r.RelationshipType,
-			&r.Strength, &r.KnowledgeID, &r.CreatedAt); err != nil {
+			&r.Strength, &r.KnowledgeID, &r.Confidence, &r.Source,
+			&r.ValidFrom, &r.ValidTo, &r.Metadata, &r.CreatedAt); err != nil {
 			return nil, fmt.Errorf("scanning relationship: %w", err)
 		}
 		rels = append(rels, r)

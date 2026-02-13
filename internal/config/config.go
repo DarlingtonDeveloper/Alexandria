@@ -42,6 +42,9 @@ type Config struct {
 
 	// JWT
 	JWTSecret string
+
+	// Semantic layer
+	SemanticEnabled bool
 }
 
 // Load reads configuration from environment variables with sensible defaults.
@@ -64,6 +67,7 @@ func Load() (*Config, error) {
 		BriefingRateLimit:  envInt("BRIEFING_RATE_LIMIT", 5),
 		RateWindow:         time.Minute,
 		JWTSecret:          envStr("JWT_SECRET", ""),
+		SemanticEnabled:    envStr("SEMANTIC_ENABLED", "") == "true",
 	}
 
 	// Load encryption key from file if not set via env

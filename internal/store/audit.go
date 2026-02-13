@@ -19,8 +19,11 @@ const (
 	ActionSecretDelete    AccessAction = "secret.delete"
 	ActionSecretRotate    AccessAction = "secret.rotate"
 	ActionBriefingGen     AccessAction = "briefing.generate"
-	ActionGraphRead       AccessAction = "graph.read"
-	ActionGraphWrite      AccessAction = "graph.write"
+	ActionGraphRead        AccessAction = "graph.read"
+	ActionGraphWrite       AccessAction = "graph.write"
+	ActionIdentityResolve  AccessAction = "identity.resolve"
+	ActionIdentityMerge    AccessAction = "identity.merge"
+	ActionSemanticRead     AccessAction = "semantic.read"
 )
 
 // AccessLogEntry represents an audit log record.

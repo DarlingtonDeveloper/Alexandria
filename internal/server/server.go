@@ -13,6 +13,7 @@ import (
 	"github.com/warrentherabbit/alexandria/internal/embeddings"
 	"github.com/warrentherabbit/alexandria/internal/encryption"
 	"github.com/warrentherabbit/alexandria/internal/hermes"
+	"github.com/warrentherabbit/alexandria/internal/identity"
 	"github.com/warrentherabbit/alexandria/internal/middleware"
 	"github.com/warrentherabbit/alexandria/internal/store"
 
@@ -30,7 +31,7 @@ type Server struct {
 }
 
 // New creates a new Server with all routes configured.
-func New(cfg *config.Config, db *store.DB, hermesClient *hermes.Client, embedder embeddings.Provider, encryptor *encryption.Encryptor, logger *slog.Logger) *Server {
+func New(cfg *config.Config, db *store.DB, hermesClient *hermes.Client, embedder embeddings.Provider, encryptor *encryption.Encryptor, resolver *identity.Resolver, logger *slog.Logger) *Server {
 	r := chi.NewRouter()
 
 	// Global middleware
@@ -46,7 +47,7 @@ func New(cfg *config.Config, db *store.DB, hermesClient *hermes.Client, embedder
 	secretStore := store.NewSecretStore(db)
 	graphStore := store.NewGraphStore(db)
 	auditStore := store.NewAuditStore(db)
-	
+
 	// New access control stores
 	peopleStore := store.NewPersonStore(db)
 	devicesStore := store.NewDeviceStore(db)
@@ -65,11 +66,15 @@ func New(cfg *config.Config, db *store.DB, hermesClient *hermes.Client, embedder
 	briefingAssembler := briefings.NewAssembler(knowledgeStore, secretStore)
 	briefingHandler := api.NewBriefingHandler(briefingAssembler, auditStore, publisher)
 	graphHandler := api.NewGraphHandler(graphStore, auditStore)
-	
+
 	// New access control handlers
 	peopleHandler := api.NewPeopleHandler(peopleStore, auditStore)
 	devicesHandler := api.NewDevicesHandler(devicesStore, auditStore)
 	grantsHandler := api.NewGrantsHandler(grantsStore, auditStore)
+
+	// Identity + Semantic handlers
+	identityHandler := api.NewIdentityHandler(resolver, db, auditStore)
+	semanticHandler := api.NewSemanticHandler(db)
 
 	// Rate limiters
 	knowledgeRL := middleware.NewRateLimiter(cfg.KnowledgeRateLimit, cfg.RateWindow)
@@ -123,7 +128,7 @@ func New(cfg *config.Config, db *store.DB, hermesClient *hermes.Client, embedder
 
 		// Access Control - People
 		r.Route("/people", func(r chi.Router) {
-			r.Use(knowledgeRL.Middleware) // Reuse knowledge rate limit
+			r.Use(knowledgeRL.Middleware)
 			r.Post("/", peopleHandler.Create)
 			r.Get("/", peopleHandler.List)
 			r.Get("/{id}", peopleHandler.Get)
@@ -133,7 +138,7 @@ func New(cfg *config.Config, db *store.DB, hermesClient *hermes.Client, embedder
 
 		// Access Control - Devices
 		r.Route("/devices", func(r chi.Router) {
-			r.Use(knowledgeRL.Middleware) // Reuse knowledge rate limit
+			r.Use(knowledgeRL.Middleware)
 			r.Post("/", devicesHandler.Create)
 			r.Get("/", devicesHandler.List)
 			r.Get("/{id}", devicesHandler.Get)
@@ -143,12 +148,34 @@ func New(cfg *config.Config, db *store.DB, hermesClient *hermes.Client, embedder
 
 		// Access Control - Grants
 		r.Route("/grants", func(r chi.Router) {
-			r.Use(knowledgeRL.Middleware) // Reuse knowledge rate limit
+			r.Use(knowledgeRL.Middleware)
 			r.Post("/", grantsHandler.Create)
 			r.Get("/", grantsHandler.List)
 			r.Get("/check", grantsHandler.CheckAccess)
 			r.Get("/{id}", grantsHandler.Get)
 			r.Delete("/{id}", grantsHandler.Delete)
+		})
+
+		// Identity Resolution
+		r.Route("/identity", func(r chi.Router) {
+			r.Use(knowledgeRL.Middleware)
+			r.Post("/resolve", identityHandler.Resolve)
+			r.Post("/merge", identityHandler.Merge)
+			r.Get("/pending", identityHandler.Pending)
+			r.Post("/aliases/{id}/review", identityHandler.ReviewAlias)
+			r.Get("/entities/{id}", identityHandler.EntityLookup)
+		})
+
+		// Semantic Layer
+		r.Route("/semantic", func(r chi.Router) {
+			r.Use(knowledgeRL.Middleware)
+			r.Get("/status", semanticHandler.Status)
+			r.Get("/similar/{id}", semanticHandler.SimilarEntities)
+			r.Get("/clusters", semanticHandler.ListClusters)
+			r.Get("/clusters/{id}/members", semanticHandler.ClusterMembers)
+			r.Get("/entities/{id}/clusters", semanticHandler.EntityClusters)
+			r.Get("/proposals", semanticHandler.Proposals)
+			r.Post("/proposals/{id}/review", semanticHandler.ReviewProposal)
 		})
 	})
 
