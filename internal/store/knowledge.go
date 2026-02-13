@@ -447,6 +447,7 @@ func (s *KnowledgeStore) Search(ctx context.Context, input SearchInput) ([]Searc
 		LIMIT %d`,
 		embeddingArgN, strings.Join(conditions, " AND "), embeddingArgN, minSim, embeddingArgN, limit)
 
+	args = append(args, input.QueryEmbedding)
 	rows, err := s.db.Pool.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("searching knowledge: %w", err)

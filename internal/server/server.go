@@ -8,6 +8,7 @@ import (
 	chimw "github.com/go-chi/chi/v5/middleware"
 
 	"github.com/MikeSquared-Agency/Alexandria/internal/api"
+	"github.com/MikeSquared-Agency/Alexandria/internal/bootctx"
 	"github.com/MikeSquared-Agency/Alexandria/internal/briefings"
 	"github.com/MikeSquared-Agency/Alexandria/internal/config"
 	"github.com/MikeSquared-Agency/Alexandria/internal/embeddings"
@@ -65,6 +66,8 @@ func New(cfg *config.Config, db *store.DB, hermesClient *hermes.Client, embedder
 	secretHandler := api.NewSecretHandler(secretStore, grantsStore, auditStore, encryptor, publisher)
 	briefingAssembler := briefings.NewAssembler(knowledgeStore, secretStore)
 	briefingHandler := api.NewBriefingHandler(briefingAssembler, auditStore, publisher)
+	contextAssembler := bootctx.NewAssembler(knowledgeStore, secretStore, peopleStore, graphStore, grantsStore)
+	contextHandler := api.NewContextHandler(contextAssembler, auditStore, publisher, logger)
 	graphHandler := api.NewGraphHandler(graphStore, auditStore)
 
 	// New access control handlers
@@ -114,6 +117,12 @@ func New(cfg *config.Config, db *store.DB, hermesClient *hermes.Client, embedder
 		r.Route("/briefings", func(r chi.Router) {
 			r.Use(briefingRL.Middleware)
 			r.Get("/{agent_id}", briefingHandler.Generate)
+		})
+
+		// Boot Context
+		r.Route("/context", func(r chi.Router) {
+			r.Use(briefingRL.Middleware)
+			r.Get("/{agent_id}", contextHandler.Generate)
 		})
 
 		// Knowledge Graph
