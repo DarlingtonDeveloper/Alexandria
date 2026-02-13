@@ -68,6 +68,11 @@ Agent → POST /api/v1/knowledge/search → Generate query embedding → pgvecto
 Warren waking agent → GET /api/v1/briefings/{agent_id} → Query recent events + relevant knowledge + agent context → Return structured briefing
 ```
 
+### Boot Context
+```
+Agent container starts → GET /api/v1/context/{agent_id} → Assemble owner, people, agents, access, rules, infra → Return text/markdown → Written to workspace/CONTEXT.md
+```
+
 ## Technology Stack
 
 | Component | Technology | Rationale |
