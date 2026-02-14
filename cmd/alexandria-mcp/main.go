@@ -188,7 +188,11 @@ func main() {
 		baseURL = "http://localhost:8500"
 	}
 
-	client := mcpclient.New(baseURL)
+	var opts []mcpclient.Option
+	if key := os.Getenv("ALEXANDRIA_API_KEY"); key != "" {
+		opts = append(opts, mcpclient.WithAPIKey(key))
+	}
+	client := mcpclient.New(baseURL, opts...)
 
 	scanner := bufio.NewScanner(os.Stdin)
 	scanner.Buffer(make([]byte, 0, 1024*1024), 1024*1024)
