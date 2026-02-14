@@ -41,6 +41,7 @@ func New(cfg *config.Config, db *store.DB, hermesClient *hermes.Client, embedder
 	r.Use(chimw.Recoverer)
 	r.Use(chimw.Timeout(30 * time.Second))
 	r.Use(middleware.RequestLogging(logger))
+	r.Use(middleware.APIKeyAuth(cfg.APIKey))
 	r.Use(middleware.AgentAuth(cfg.JWTSecret))
 
 	// Stores

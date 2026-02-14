@@ -17,15 +17,28 @@ import (
 // Client is an HTTP client for the Alexandria API.
 type Client struct {
 	baseURL string
+	apiKey  string
 	http    *http.Client
 }
 
+// Option configures a Client.
+type Option func(*Client)
+
+// WithAPIKey sets the API key sent via X-API-Key header.
+func WithAPIKey(key string) Option {
+	return func(c *Client) { c.apiKey = key }
+}
+
 // New creates a Client. baseURL should be like "http://localhost:8500".
-func New(baseURL string) *Client {
-	return &Client{
+func New(baseURL string, opts ...Option) *Client {
+	c := &Client{
 		baseURL: baseURL,
 		http:    &http.Client{Timeout: 10 * time.Second},
 	}
+	for _, o := range opts {
+		o(c)
+	}
+	return c
 }
 
 // --- Request/Response types ---
@@ -236,6 +249,9 @@ func (c *Client) post(ctx context.Context, path string, body any, out any) error
 }
 
 func (c *Client) do(req *http.Request, out any) error {
+	if c.apiKey != "" {
+		req.Header.Set("X-API-Key", c.apiKey)
+	}
 	resp, err := c.http.Do(req)
 	if err != nil {
 		return fmt.Errorf("request %s %s: %w", req.Method, req.URL.Path, err)

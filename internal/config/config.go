@@ -40,8 +40,9 @@ type Config struct {
 	BriefingRateLimit  int           // requests per minute
 	RateWindow         time.Duration // window for rate limiting
 
-	// JWT
+	// Authentication
 	JWTSecret string
+	APIKey    string
 
 	// Semantic layer
 	SemanticEnabled bool
@@ -67,6 +68,7 @@ func Load() (*Config, error) {
 		BriefingRateLimit:  envInt("BRIEFING_RATE_LIMIT", 5),
 		RateWindow:         time.Minute,
 		JWTSecret:          envStr("JWT_SECRET", ""),
+		APIKey:             envStr("ALEXANDRIA_API_KEY", ""),
 		SemanticEnabled:    envStr("SEMANTIC_ENABLED", "") == "true",
 	}
 
