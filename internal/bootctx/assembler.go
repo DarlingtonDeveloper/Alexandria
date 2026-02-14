@@ -21,7 +21,6 @@ const (
 
 // AgentProfile defines per-agent scope rules for context generation.
 type AgentProfile struct {
-	OwnerID   string   // person identifier (empty = no specific owner)
 	Access    AccessLevel
 	ExtraTags []string // additional knowledge tags to include
 }
@@ -29,8 +28,8 @@ type AgentProfile struct {
 // agentProfiles maps known agent names to their scope rules.
 var agentProfiles = map[string]AgentProfile{
 	"kai":         {Access: FullAccess},
-	"lily":        {OwnerID: "mike-a", Access: ScopedAccess},
-	"scout":       {OwnerID: "mike-d", Access: ScopedAccess},
+	"lily":        {Access: ScopedAccess},
+	"scout":       {Access: ScopedAccess},
 	"dutybound":   {ExtraTags: []string{"ci", "workflow", "repo"}},
 	"celebrimbor": {ExtraTags: []string{"souls", "promptforge", "design"}},
 }
@@ -39,7 +38,6 @@ var agentProfiles = map[string]AgentProfile{
 type Assembler struct {
 	knowledge *store.KnowledgeStore
 	secrets   *store.SecretStore
-	people    *store.PersonStore
 	graph     *store.GraphStore
 	grants    *store.GrantStore
 }
@@ -48,14 +46,12 @@ type Assembler struct {
 func NewAssembler(
 	knowledge *store.KnowledgeStore,
 	secrets *store.SecretStore,
-	people *store.PersonStore,
 	graph *store.GraphStore,
 	grants *store.GrantStore,
 ) *Assembler {
 	return &Assembler{
 		knowledge: knowledge,
 		secrets:   secrets,
-		people:    people,
 		graph:     graph,
 		grants:    grants,
 	}
@@ -65,14 +61,36 @@ func NewAssembler(
 func (a *Assembler) Generate(ctx context.Context, agentID string) (string, error) {
 	profile := agentProfiles[agentID] // zero-value is fine for unknown agents
 
+	// Derive owner from graph: agent entity → "owns" relationship → person entity
+	var ownerEntity *store.Entity
+	agentEntity, err := a.graph.GetEntityByName(ctx, agentID, store.EntityAgent)
+	if err != nil {
+		return "", fmt.Errorf("looking up agent entity: %w", err)
+	}
+	if agentEntity != nil {
+		rels, err := a.graph.GetRelationships(ctx, agentEntity.ID)
+		if err != nil {
+			return "", fmt.Errorf("looking up agent relationships: %w", err)
+		}
+		for _, r := range rels {
+			if r.RelationshipType == "owns" && r.TargetEntityID == agentEntity.ID {
+				ownerEntity, err = a.graph.GetEntity(ctx, r.SourceEntityID)
+				if err != nil {
+					return "", fmt.Errorf("looking up owner entity: %w", err)
+				}
+				break
+			}
+		}
+	}
+
 	var b strings.Builder
 	b.WriteString("# Boot Context\n\n")
 	b.WriteString(fmt.Sprintf("Agent: **%s**\n\n", agentID))
 
-	if err := a.writeOwnerSection(ctx, &b, agentID, profile); err != nil {
+	if err := a.writeOwnerSection(ctx, &b, ownerEntity); err != nil {
 		return "", fmt.Errorf("owner section: %w", err)
 	}
-	if err := a.writePeopleSection(ctx, &b, profile); err != nil {
+	if err := a.writePeopleSection(ctx, &b, profile, ownerEntity); err != nil {
 		return "", fmt.Errorf("people section: %w", err)
 	}
 	if err := a.writeAgentsSection(ctx, &b); err != nil {
@@ -91,47 +109,37 @@ func (a *Assembler) Generate(ctx context.Context, agentID string) (string, error
 	return b.String(), nil
 }
 
-// writeOwnerSection writes the "Your Owner" section if the agent has one.
-func (a *Assembler) writeOwnerSection(ctx context.Context, b *strings.Builder, agentID string, profile AgentProfile) error {
-	if profile.OwnerID == "" {
-		return nil
-	}
-
-	person, err := a.people.GetByIdentifier(ctx, profile.OwnerID)
-	if err != nil {
-		return err
-	}
-	if person == nil {
+// writeOwnerSection writes the "Your Owner" section from the graph entity.
+func (a *Assembler) writeOwnerSection(ctx context.Context, b *strings.Builder, owner *store.Entity) error {
+	if owner == nil {
 		return nil
 	}
 
 	b.WriteString("## Your Owner\n\n")
-	b.WriteString(fmt.Sprintf("- **Name**: %s\n", person.Name))
-	b.WriteString(fmt.Sprintf("- **Identifier**: %s\n", person.Identifier))
+	b.WriteString(fmt.Sprintf("- **Name**: %s\n", owner.DisplayName))
+	b.WriteString(fmt.Sprintf("- **Identifier**: %s\n", metaString(owner.Metadata, "identifier", owner.Name)))
 
-	if person.Metadata != nil {
-		if v := metaString(person.Metadata, "phone", ""); v != "" {
-			b.WriteString(fmt.Sprintf("- **Phone**: %s\n", v))
-		}
-		if v := metaString(person.Metadata, "timezone", ""); v != "" {
-			b.WriteString(fmt.Sprintf("- **Timezone**: %s\n", v))
-		}
-		if v := metaString(person.Metadata, "preferences", ""); v != "" {
-			b.WriteString(fmt.Sprintf("- **Preferences**: %s\n", v))
-		}
+	if v := metaString(owner.Metadata, "phone", ""); v != "" {
+		b.WriteString(fmt.Sprintf("- **Phone**: %s\n", v))
 	}
-
+	if v := metaString(owner.Metadata, "timezone", ""); v != "" {
+		b.WriteString(fmt.Sprintf("- **Timezone**: %s\n", v))
+	}
+	if v := metaString(owner.Metadata, "preferences", ""); v != "" {
+		b.WriteString(fmt.Sprintf("- **Preferences**: %s\n", v))
+	}
 	b.WriteString("\n")
 	return nil
 }
 
-// writePeopleSection writes a markdown table of all known people.
-func (a *Assembler) writePeopleSection(ctx context.Context, b *strings.Builder, profile AgentProfile) error {
-	people, err := a.people.List(ctx)
+// writePeopleSection writes a markdown table of all known people from vault_entities.
+func (a *Assembler) writePeopleSection(ctx context.Context, b *strings.Builder, profile AgentProfile, owner *store.Entity) error {
+	personType := store.EntityPerson
+	entities, err := a.graph.ListEntities(ctx, &personType, 50, 0)
 	if err != nil {
 		return err
 	}
-	if len(people) == 0 {
+	if len(entities) == 0 {
 		return nil
 	}
 
@@ -139,13 +147,14 @@ func (a *Assembler) writePeopleSection(ctx context.Context, b *strings.Builder, 
 	b.WriteString("| Name | Identifier | Timezone |\n")
 	b.WriteString("|------|------------|----------|\n")
 
-	for _, p := range people {
-		tz := metaString(p.Metadata, "timezone", "—")
-		// Scoped agents only see their owner unless FullAccess
-		if profile.Access != FullAccess && profile.OwnerID != "" && p.Identifier != profile.OwnerID {
+	for _, e := range entities {
+		identifier := metaString(e.Metadata, "identifier", e.Name)
+		tz := metaString(e.Metadata, "timezone", "—")
+		// Scoped agents only see their owner
+		if profile.Access != FullAccess && owner != nil && e.ID != owner.ID {
 			continue
 		}
-		b.WriteString(fmt.Sprintf("| %s | %s | %s |\n", p.Name, p.Identifier, tz))
+		b.WriteString(fmt.Sprintf("| %s | %s | %s |\n", e.DisplayName, identifier, tz))
 	}
 
 	b.WriteString("\n")
@@ -153,6 +162,7 @@ func (a *Assembler) writePeopleSection(ctx context.Context, b *strings.Builder, 
 }
 
 // writeAgentsSection writes a markdown table of all known agents from the graph.
+// When entity summary is empty, falls back to knowledge entries tagged ['agent', '<name>', 'config'].
 func (a *Assembler) writeAgentsSection(ctx context.Context, b *strings.Builder) error {
 	agentType := store.EntityAgent
 	entities, err := a.graph.ListEntities(ctx, &agentType, 50, 0)
@@ -163,6 +173,29 @@ func (a *Assembler) writeAgentsSection(ctx context.Context, b *strings.Builder) 
 		return nil
 	}
 
+	// Pre-load agent config knowledge entries for summary fallback
+	catFact := store.CategoryFact
+	agentKnowledge, err := a.knowledge.List(ctx, store.KnowledgeFilter{
+		Category: &catFact,
+		Tags:     []string{"agent", "config"},
+		AgentID:  "kai", // use kai for full access to public entries
+		Limit:    50,
+	})
+	if err != nil {
+		return err
+	}
+
+	// Index by agent name (lowercase) for quick lookup
+	knowledgeByAgent := make(map[string]string)
+	for _, ke := range agentKnowledge {
+		for _, tag := range ke.Tags {
+			// Tags are like ['agent', 'kai', 'config'] — the middle tag is the agent name
+			if tag != "agent" && tag != "config" && tag != "capabilities" {
+				knowledgeByAgent[tag] = ke.Content
+			}
+		}
+	}
+
 	b.WriteString("## Agents\n\n")
 	b.WriteString("| Name | Summary |\n")
 	b.WriteString("|------|---------|\n")
@@ -170,7 +203,13 @@ func (a *Assembler) writeAgentsSection(ctx context.Context, b *strings.Builder) 
 	for _, e := range entities {
 		summary := e.Summary
 		if summary == "" {
-			summary = "—"
+			// Fallback: look up from knowledge entries
+			agentKey := strings.ToLower(e.Name)
+			if desc, ok := knowledgeByAgent[agentKey]; ok {
+				summary = desc
+			} else {
+				summary = "—"
+			}
 		}
 		b.WriteString(fmt.Sprintf("| %s | %s |\n", e.DisplayName, summary))
 	}
@@ -236,12 +275,10 @@ func (a *Assembler) writeAccessSection(ctx context.Context, b *strings.Builder, 
 
 // writeRulesSection writes operational rules from knowledge entries.
 func (a *Assembler) writeRulesSection(ctx context.Context, b *strings.Builder, agentID string, profile AgentProfile) error {
-	// Base rules: category=fact, tag=rule
-	tags := []string{"rule"}
-
+	catDecision := store.CategoryDecision
 	ruleEntries, err := a.knowledge.List(ctx, store.KnowledgeFilter{
-		Category: func() *store.KnowledgeCategory { c := store.CategoryFact; return &c }(),
-		Tags:     tags,
+		Category: &catDecision,
+		Tags:     []string{"rules"},
 		AgentID:  agentID,
 		Limit:    50,
 	})
@@ -253,10 +290,9 @@ func (a *Assembler) writeRulesSection(ctx context.Context, b *strings.Builder, a
 	var extraEntries []store.KnowledgeEntry
 	for _, tag := range profile.ExtraTags {
 		entries, err := a.knowledge.List(ctx, store.KnowledgeFilter{
-			Category: func() *store.KnowledgeCategory { c := store.CategoryFact; return &c }(),
-			Tags:     []string{tag},
-			AgentID:  agentID,
-			Limit:    20,
+			Tags:    []string{tag},
+			AgentID: agentID,
+			Limit:   20,
 		})
 		if err != nil {
 			return err

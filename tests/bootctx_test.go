@@ -18,7 +18,7 @@ func TestAgentProfiles_KnownAgents(t *testing.T) {
 		t.Run(agent, func(t *testing.T) {
 			// Ensure the assembler constructor accepts all required stores as nil-safe types
 			// (verifies the API contract, not runtime behavior)
-			_ = bootctx.NewAssembler(nil, nil, nil, nil, nil)
+			_ = bootctx.NewAssembler(nil, nil, nil, nil)
 		})
 	}
 }
@@ -143,8 +143,8 @@ func TestAgentAccessLevels(t *testing.T) {
 }
 
 func TestAssemblerConstructor(t *testing.T) {
-	// Verify NewAssembler returns a non-nil assembler.
-	a := bootctx.NewAssembler(nil, nil, nil, nil, nil)
+	// Verify NewAssembler returns a non-nil assembler (4 args: knowledge, secrets, graph, grants).
+	a := bootctx.NewAssembler(nil, nil, nil, nil)
 	if a == nil {
 		t.Error("NewAssembler returned nil")
 	}

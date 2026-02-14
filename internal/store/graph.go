@@ -133,6 +133,23 @@ func (s *GraphStore) ListEntities(ctx context.Context, entityType *EntityType, l
 	return entities, rows.Err()
 }
 
+// GetEntityByName retrieves an entity by name and type (case-insensitive).
+func (s *GraphStore) GetEntityByName(ctx context.Context, name string, entityType EntityType) (*Entity, error) {
+	e := &Entity{}
+	err := s.db.Pool.QueryRow(ctx,
+		`SELECT id, name, entity_type, key, display_name, summary, metadata, created_at, updated_at, deleted_at
+		 FROM vault_entities WHERE lower(name) = lower($1) AND entity_type = $2 AND deleted_at IS NULL`, name, entityType,
+	).Scan(&e.ID, &e.Name, &e.EntityType, &e.Key, &e.DisplayName, &e.Summary,
+		&e.Metadata, &e.CreatedAt, &e.UpdatedAt, &e.DeletedAt)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("getting entity by name: %w", err)
+	}
+	return e, nil
+}
+
 // CreateRelationship inserts a relationship (upserts on source+target+type).
 func (s *GraphStore) CreateRelationship(ctx context.Context, sourceID, targetID, relType string, strength float64, knowledgeID *string) (*Relationship, error) {
 	query := `
