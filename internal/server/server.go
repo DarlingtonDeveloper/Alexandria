@@ -66,7 +66,7 @@ func New(cfg *config.Config, db *store.DB, hermesClient *hermes.Client, embedder
 	secretHandler := api.NewSecretHandler(secretStore, grantsStore, auditStore, encryptor, publisher)
 	briefingAssembler := briefings.NewAssembler(knowledgeStore, secretStore)
 	briefingHandler := api.NewBriefingHandler(briefingAssembler, auditStore, publisher)
-	contextAssembler := bootctx.NewAssembler(knowledgeStore, secretStore, peopleStore, graphStore, grantsStore)
+	contextAssembler := bootctx.NewAssembler(knowledgeStore, secretStore, graphStore, grantsStore)
 	contextHandler := api.NewContextHandler(contextAssembler, auditStore, publisher, logger)
 	graphHandler := api.NewGraphHandler(graphStore, auditStore)
 
