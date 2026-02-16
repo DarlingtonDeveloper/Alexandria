@@ -136,6 +136,12 @@ func (h *KnowledgeHandler) List(w http.ResponseWriter, r *http.Request) {
 	if v := q.Get("source_agent"); v != "" {
 		filter.SourceAgent = &v
 	}
+	if v := q.Get("tag"); v != "" {
+		filter.Tags = []string{v}
+	}
+	if v := q["tags"]; len(v) > 0 {
+		filter.Tags = append(filter.Tags, v...)
+	}
 	if v := q.Get("limit"); v != "" {
 		if n, err := strconv.Atoi(v); err == nil {
 			filter.Limit = n
