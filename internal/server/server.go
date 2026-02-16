@@ -4,6 +4,8 @@ package server
 import (
 	"time"
 
+	"net/http"
+
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
 
@@ -84,6 +86,14 @@ func New(cfg *config.Config, db *store.DB, hermesClient *hermes.Client, embedder
 	knowledgeRL := middleware.NewRateLimiter(cfg.KnowledgeRateLimit, cfg.RateWindow)
 	secretRL := middleware.NewRateLimiter(cfg.SecretRateLimit, cfg.RateWindow)
 	briefingRL := middleware.NewRateLimiter(cfg.BriefingRateLimit, cfg.RateWindow)
+
+	// Root-level health and info (no auth required)
+	r.Get("/health", healthHandler.Health)
+	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"service":"alexandria","version":"0.1.0"}`))
+	})
 
 	// Routes
 	r.Route("/api/v1", func(r chi.Router) {
