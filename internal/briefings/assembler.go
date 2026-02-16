@@ -114,7 +114,42 @@ func (a *Assembler) Generate(ctx context.Context, agentID string, since time.Tim
 		})
 	}
 
-	// 3. Secrets available to this agent
+	// 3. Recent corrections — lessons from Dredd tagged for this agent role
+	catLesson := store.CategoryLesson
+	corrections, err := a.knowledge.List(ctx, store.KnowledgeFilter{
+		Category: &catLesson,
+		Tags:     []string{"correction", "agent:" + agentID},
+		AgentID:  agentID,
+		Limit:    5,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("listing corrections: %w", err)
+	}
+
+	var correctionItems []BriefingItem
+	for _, e := range corrections {
+		summary := e.Content
+		if e.Summary != nil && *e.Summary != "" {
+			summary = *e.Summary
+		}
+		// Extract category from metadata for formatted output
+		cat := "unknown"
+		if e.Metadata != nil {
+			if c, ok := e.Metadata["category"].(string); ok {
+				cat = c
+			}
+		}
+		formatted := fmt.Sprintf("Previous correction (%s): %s", cat, summary)
+		ts := e.CreatedAt
+		correctionItems = append(correctionItems, BriefingItem{
+			Timestamp: &ts,
+			Content:   formatted,
+			Source:    "dredd:correction",
+			Relevance: e.Confidence,
+		})
+	}
+
+	// 4. Secrets available to this agent
 	allSecrets, err := a.secrets.List(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("listing secrets: %w", err)
@@ -127,8 +162,8 @@ func (a *Assembler) Generate(ctx context.Context, agentID string, since time.Tim
 	}
 
 	// Build summary
-	summary := fmt.Sprintf("Briefing for %s. %d new events since %s. %d secrets available.",
-		agentID, len(eventItems), since.Format(time.RFC3339), len(secretNames))
+	summary := fmt.Sprintf("Briefing for %s. %d new events since %s. %d corrections. %d secrets available.",
+		agentID, len(eventItems), since.Format(time.RFC3339), len(correctionItems), len(secretNames))
 
 	// Assemble sections
 	var sections []BriefingSection
@@ -142,6 +177,12 @@ func (a *Assembler) Generate(ctx context.Context, agentID string, since time.Tim
 		sections = append(sections, BriefingSection{
 			Title: "Your Context",
 			Items: contextItems,
+		})
+	}
+	if len(correctionItems) > 0 {
+		sections = append(sections, BriefingSection{
+			Title: "Recent Corrections",
+			Items: correctionItems,
 		})
 	}
 

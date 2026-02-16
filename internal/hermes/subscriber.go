@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/nats-io/nats.go"
 	"github.com/MikeSquared-Agency/Alexandria/internal/embeddings"
@@ -32,6 +33,27 @@ func NewSubscriber(client *Client, knowledge *store.KnowledgeStore, embedder emb
 	}
 }
 
+// CorrectionSignal represents a Dredd correction event payload.
+type CorrectionSignal struct {
+	SessionRef     string `json:"session_ref"`
+	DecisionID     string `json:"decision_id"`
+	AgentID        string `json:"agent_id"`
+	ModelID        string `json:"model_id"`
+	ModelTier      string `json:"model_tier"`
+	CorrectionType string `json:"correction_type"`
+	Category       string `json:"category"`
+	Severity       string `json:"severity"`
+}
+
+// CorrectionEnvelope is the Hermes envelope wrapping a correction signal.
+type CorrectionEnvelope struct {
+	ID        string          `json:"id"`
+	Type      string          `json:"type"`
+	Source    string          `json:"source"`
+	Timestamp time.Time       `json:"timestamp"`
+	Data      json.RawMessage `json:"data"`
+}
+
 // HermesEvent represents an incoming event from Hermes.
 type HermesEvent struct {
 	ID     string `json:"id"`
@@ -52,6 +74,7 @@ func (s *Subscriber) Start(ctx context.Context) error {
 		"swarm.task.*.failed":     s.handleTaskFailed,
 		"swarm.agent.*.started":   s.handleAgentStarted,
 		"swarm.agent.*.stopped":   s.handleAgentStopped,
+		"swarm.dredd.correction":  s.handleCorrection,
 	}
 
 	for subject, handler := range subjects {
@@ -104,6 +127,101 @@ func (s *Subscriber) handleAgentStarted(msg *nats.Msg) {
 
 func (s *Subscriber) handleAgentStopped(msg *nats.Msg) {
 	s.logger.Info("agent stopped event", "subject", msg.Subject)
+	s.ack(msg)
+}
+
+func (s *Subscriber) handleCorrection(msg *nats.Msg) {
+	// Parse the Hermes envelope
+	var envelope CorrectionEnvelope
+	if err := json.Unmarshal(msg.Data, &envelope); err != nil {
+		s.logger.Error("failed to parse correction envelope", "error", err, "subject", msg.Subject)
+		s.ack(msg)
+		return
+	}
+
+	// Parse the correction signal from the Data field
+	var signal CorrectionSignal
+	if err := json.Unmarshal(envelope.Data, &signal); err != nil {
+		s.logger.Error("failed to parse correction signal data", "error", err, "event_id", envelope.ID)
+		s.ack(msg)
+		return
+	}
+
+	// Only store rejected decisions as lessons — confirmed decisions need no correction
+	if signal.CorrectionType != "rejected" {
+		s.logger.Debug("skipping non-rejected correction", "type", signal.CorrectionType, "decision_id", signal.DecisionID)
+		s.ack(msg)
+		return
+	}
+
+	ctx := context.Background()
+
+	content := fmt.Sprintf("Dredd rejected decision %s by agent %s (model: %s, tier: %s). Category: %s, severity: %s. Session: %s",
+		signal.DecisionID, signal.AgentID, signal.ModelID, signal.ModelTier, signal.Category, signal.Severity, signal.SessionRef)
+
+	summary := fmt.Sprintf("Rejected %s decision (%s) for %s/%s",
+		signal.Category, signal.Severity, signal.AgentID, signal.ModelTier)
+
+	// Build tags for later retrieval: agent role, model tier, correction category
+	tags := []string{
+		"correction",
+		"agent:" + signal.AgentID,
+		"model_tier:" + signal.ModelTier,
+		"category:" + signal.Category,
+		"severity:" + signal.Severity,
+	}
+
+	// Generate embedding for the lesson content
+	embedding, err := s.embedder.Embed(ctx, content)
+	if err != nil {
+		s.logger.Error("failed to generate embedding for correction", "error", err)
+		// Continue without embedding
+	}
+
+	eventID := envelope.ID
+	input := store.KnowledgeCreateInput{
+		Content:        content,
+		Summary:        &summary,
+		SourceAgent:    "dredd",
+		Category:       store.CategoryLesson,
+		Scope:          store.ScopePublic,
+		Tags:           tags,
+		Embedding:      embedding,
+		Metadata: map[string]any{
+			"decision_id":     signal.DecisionID,
+			"agent_id":        signal.AgentID,
+			"model_id":        signal.ModelID,
+			"model_tier":      signal.ModelTier,
+			"correction_type": signal.CorrectionType,
+			"category":        signal.Category,
+			"severity":        signal.Severity,
+			"session_ref":     signal.SessionRef,
+		},
+		SourceEventID:  &eventID,
+		Confidence:     0.9,
+		RelevanceDecay: store.DecaySlow,
+	}
+
+	entry, err := s.knowledge.Create(ctx, input)
+	if err != nil {
+		s.logger.Error("failed to persist correction as lesson", "error", err, "event_id", envelope.ID, "decision_id", signal.DecisionID)
+		s.ack(msg)
+		return
+	}
+
+	s.logger.Info("captured Dredd correction as lesson",
+		"knowledge_id", entry.ID,
+		"event_id", envelope.ID,
+		"agent_id", signal.AgentID,
+		"category", signal.Category,
+		"severity", signal.Severity,
+	)
+
+	// Publish vault.knowledge.created event
+	if s.publisher != nil {
+		_ = s.publisher.KnowledgeCreated(ctx, entry)
+	}
+
 	s.ack(msg)
 }
 
